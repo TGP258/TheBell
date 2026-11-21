@@ -407,6 +407,16 @@ def main() -> None:
     )
     (RES / "icon-monochrome.svg").write_text(wrap(mono, ""), encoding="utf-8")
 
+    # 同步给 Web 端：favicon 与品牌角标
+    public = ROOT / "public"
+    public.mkdir(exist_ok=True)
+    (public / "brand-icon.svg").write_text(
+        (RES / "icon.svg").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+    (public / "favicon.svg").write_text(
+        (RES / "icon.svg").read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
     android = ROOT / "android" / "app" / "src" / "main" / "res"
     drawable = android / "drawable"
     drawable.mkdir(parents=True, exist_ok=True)

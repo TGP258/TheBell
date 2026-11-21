@@ -167,6 +167,7 @@ scripts/
 - 自适应图标：108dp 画布，纯白 `background` + 矢量 `foreground`，图形控制在中心 66dp 安全区内，耳朵 / 尾巴不会被任何遮罩裁掉
 - 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色
 - 配色：蓝 `#2563EB`、黄 `#FBBF24`、白 `#FFFFFF`
+- 应用内：侧边栏品牌区、启动加载页、设置「关于」卡片共用 `public/brand-icon.svg`（由 `logo.py` 随 SVG 一起同步，favicon 同源）
 
 ## Dev0.4 变更
 

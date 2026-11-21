@@ -5,7 +5,6 @@ import { Capacitor } from '@capacitor/core';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import {
   CalendarCheck2,
-  Check,
   Hourglass,
   ListChecks,
   Settings2,
@@ -96,7 +95,7 @@ onMounted(async () => {
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark"><Check :size="19" :stroke-width="3" /></div>
+        <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
           <b>TheBell</b>
           <span>学习时钟 · Dev0.4</span>
@@ -134,7 +133,7 @@ onMounted(async () => {
 
     <main class="main">
       <div v-if="!store.ready" class="boot">
-        <div class="boot-mark"><Check :size="26" :stroke-width="3" /></div>
+        <img class="boot-mark" src="/brand-icon.svg" alt="" width="68" height="68" />
         <b>TheBell</b>
         <span class="boot-spinner" />
         <p>正在准备你的计划…</p>
@@ -194,15 +193,12 @@ onMounted(async () => {
   margin-bottom: 26px;
 }
 .brand-mark {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--primary), #a855f7);
-  color: #fff;
-  box-shadow: 0 10px 22px -10px rgba(98, 87, 245, 0.75);
+  width: 40px;
+  height: 40px;
+  display: block;
   flex: none;
+  border-radius: 22.5%;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.07), 0 10px 20px -12px rgba(15, 23, 42, 0.35);
 }
 .brand-text b {
   display: block;
@@ -322,14 +318,11 @@ onMounted(async () => {
   gap: 8px;
 }
 .boot-mark {
-  width: 62px;
-  height: 62px;
-  border-radius: 20px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--primary), #a855f7);
-  color: #fff;
-  box-shadow: 0 20px 40px -18px rgba(98, 87, 245, 0.7);
+  width: 68px;
+  height: 68px;
+  display: block;
+  border-radius: 22.5%;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 24px 40px -22px rgba(37, 99, 235, 0.55);
   animation: boot-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .boot b {

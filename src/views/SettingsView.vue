@@ -332,7 +332,7 @@ function resetAll(): void {
         </div>
         <div class="set-body about">
           <div class="about-brand">
-            <div class="about-logo">✓</div>
+            <img class="about-logo" src="/brand-icon.svg" alt="TheBell" width="42" height="42" />
             <div>
               <b>TheBell</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
@@ -610,14 +610,10 @@ function resetAll(): void {
 .about-logo {
   width: 42px;
   height: 42px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(135deg, var(--primary), #a855f7);
-  color: #fff;
-  font-size: 20px;
-  font-weight: 800;
-  box-shadow: 0 8px 18px -8px rgba(98, 87, 245, 0.7);
+  display: block;
+  flex: none;
+  border-radius: 22.5%;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.07), 0 8px 16px -10px rgba(15, 23, 42, 0.3);
 }
 .about-brand b {
   display: block;
