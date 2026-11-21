@@ -1,6 +1,6 @@
 # TheBell
 
-一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.3**。
+一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.4**。
 
 适用于考研、自学考试、语言考试、职业资格考试，以及任何需要长时间专注的场景。
 
@@ -24,7 +24,7 @@
 - **倒数日**：主倒数 + 多个目标日，支持颜色与置顶
 - **JSON 导入 / 导出**：包含计划、任务、作息起止时间、打卡状态、分段计时、独立计时器、倒数日、主题
 - **主题**：浅色 / 深色 / 跟随系统
-- **版本**：`versionName = Dev0.3`，包名 `pascal.thebell`
+- **版本**：`versionName = Dev0.4`，包名 `pascal.thebell`
 
 ## 技术栈
 
@@ -90,7 +90,10 @@ src/
 android/
   app/src/main/java/pascal/thebell/PascalDbPlugin.java
 ios/App/            Xcode 工程
-scripts/generate_assets.py  图标 / 启动图生成
+scripts/
+  logo.py           生成 logo SVG 与 Android 自适应图标矢量层
+  render_icons.mjs  用无头 Chrome 把 SVG 光栅化成各密度 PNG / iOS 图标
+  generate_assets.py 生成启动图
 ```
 
 ## SQLite 结构
@@ -119,7 +122,7 @@ scripts/generate_assets.py  图标 / 启动图生成
 {
   "app": "pascal.thebell",
   "format": "thebell/v1",
-  "version": "Dev0.3",
+  "version": "Dev0.4",
   "plan": { "name": "我的学习计划", "startDate": "2026-11-21", "totalDays": 100 },
   "routine": [
     { "time": "08:00–08:50", "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 },
@@ -155,6 +158,24 @@ scripts/generate_assets.py  图标 / 启动图生成
 
 导入时会重新校验日期、科目、作息类型与时长、计时索引，并重建 ID；导出的计时器统一转为暂停状态，避免跨设备恢复时出现负数。
 
+## 图标与 Logo
+
+猫耳时钟：白色底、蓝色圆环、黄色轴心，分针指向 5 点后延伸成猫尾巴，圆环顶部两只带弧度的猫耳。
+
+- 源文件：`resources/icon.svg`（1024，白色圆角底）、`icon-square.svg`、`icon-round.svg`、`logo.svg`（透明底）、`icon-monochrome.svg`（单色剪影）
+- 生成：`python scripts/logo.py` 输出 SVG 与 Android 矢量层；`node scripts/render_icons.mjs` 光栅化 `mipmap-*/ic_launcher*.png`、`resources/icon.png` 与 iOS `AppIcon`
+- 自适应图标：108dp 画布，纯白 `background` + 矢量 `foreground`，图形控制在中心 66dp 安全区内，耳朵 / 尾巴不会被任何遮罩裁掉
+- 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色
+- 配色：蓝 `#2563EB`、黄 `#FBBF24`、白 `#FFFFFF`
+
+## Dev0.4 变更
+
+- 新 logo：猫耳时钟，蓝色圆环 / 黄色轴心 / 5 点分针延伸成猫尾 / 带弧度的猫耳
+- Android 自适应图标改为矢量双层：白色背景 + 前景矢量，并新增 monochrome 层支持主题图标
+- 旧版方形 / 圆形 / 自适应 PNG、iOS 图标、favicon、启动图全部换用新 logo
+- 清理 Capacitor 模板遗留的 `drawable-v24/ic_launcher_foreground.xml`（会覆盖新前景）
+- 版本升级 Dev0.4（versionCode 4）
+
 ## Dev0.3 变更
 
 - 自绘时间选择器：时 / 分双滚轮 + 大号预览 + 「使用当前时间」，替换系统时间弹窗
@@ -173,7 +194,7 @@ scripts/generate_assets.py  图标 / 启动图生成
 - 新增 10 / 25 / 30 / 50 分钟快捷时长，一键把结束时间设为开始 + N 分钟
 - SQLite 新增 `routine.start_min / end_min`，旧数据自动解析迁移；JSON 备份新增 `start` / `end`
 
-## Dev0.3 已知边界
+## Dev0.4 已知边界
 
 - 单计划模型（不做多计划切换 / 账号同步 / 云备份）
 - 暂无通知提醒、桌面小组件、后台常驻计时（切后台后按时间戳继续，但不会发系统通知）

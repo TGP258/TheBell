@@ -15,6 +15,8 @@ dist-ssr
 # 本地测试产物
 _shots/
 _dev*/
+_logo_preview/
+_icon_render_profile/
 _*.log
 
 # Editor directories and files
