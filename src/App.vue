@@ -9,17 +9,19 @@ import {
   Hourglass,
   ListChecks,
   Settings2,
+  Timer,
 } from 'lucide-vue-next';
 import { usePlanStore } from './stores/plan';
 import { fullDateCN, relativeLabel } from './lib/date';
 import { toast } from './lib/toast';
 import TodayView from './views/TodayView.vue';
 import PlanView from './views/PlanView.vue';
+import TimerView from './views/TimerView.vue';
 import CountdownView from './views/CountdownView.vue';
 import SettingsView from './views/SettingsView.vue';
 import ToastHost from './components/ToastHost.vue';
 
-type Tab = 'today' | 'plan' | 'countdown' | 'settings';
+type Tab = 'today' | 'plan' | 'timer' | 'countdown' | 'settings';
 
 const store = usePlanStore();
 const tab = ref<Tab>('today');
@@ -27,6 +29,7 @@ const tab = ref<Tab>('today');
 const tabs: { id: Tab; label: string; icon: Component }[] = [
   { id: 'today', label: '今日', icon: CalendarCheck2 },
   { id: 'plan', label: '计划', icon: ListChecks },
+  { id: 'timer', label: '计时', icon: Timer },
   { id: 'countdown', label: '倒数日', icon: Hourglass },
   { id: 'settings', label: '设置', icon: Settings2 },
 ];
@@ -95,8 +98,8 @@ onMounted(async () => {
       <div class="brand">
         <div class="brand-mark"><Check :size="19" :stroke-width="3" /></div>
         <div class="brand-text">
-          <b>百日冲刺</b>
-          <span>StudyPlan · Dev0.1</span>
+          <b>TheBell</b>
+          <span>学习时钟 · Dev0.1</span>
         </div>
       </div>
 
@@ -132,7 +135,7 @@ onMounted(async () => {
     <main class="main">
       <div v-if="!store.ready" class="boot">
         <div class="boot-mark"><Check :size="26" :stroke-width="3" /></div>
-        <b>百日冲刺</b>
+        <b>TheBell</b>
         <span class="boot-spinner" />
         <p>正在准备你的计划…</p>
       </div>
@@ -140,6 +143,7 @@ onMounted(async () => {
       <template v-else>
         <TodayView v-if="tab === 'today'" />
         <PlanView v-else-if="tab === 'plan'" />
+        <TimerView v-else-if="tab === 'timer'" />
         <CountdownView v-else-if="tab === 'countdown'" />
         <SettingsView v-else />
       </template>

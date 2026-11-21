@@ -1,22 +1,94 @@
-import type { AppData, Day, RoutineItem } from '../types';
+import type { AppData, Day, RoutineItem, RoutineKind } from '../types';
 import { buildDates, todayStr } from './date';
 import { newId } from './id';
 
+interface TemplateBlock {
+  kind: RoutineKind;
+  minutes: number;
+  title?: string;
+}
+
 /**
- * 中性的默认作息模板：只描述一天的时间结构，不带任何个人计划或科目偏好。
- * 用户可以随时修改时间、内容、顺序，或全部删除。
+ * 默认的一天：只保留早 / 午 / 晚起居节点，
+ * 其余学习时间统一切成 50 分钟学习 + 10 分钟休息。
+ * 起始 07:30，结束 21:30，之后 23:00 前睡觉。
  */
-export const DEFAULT_ROUTINE: { time: string; title: string }[] = [
-  { time: '7:30–8:00', title: '起床、洗漱、早餐' },
-  { time: '8:00–8:30', title: '晨间记忆（单词 / 公式 / 背诵）' },
-  { time: '8:30–12:00', title: '上午学习（把最难的科目放在上午）' },
-  { time: '12:00–13:30', title: '午饭 + 午休（20–30 分钟）' },
-  { time: '13:30–17:30', title: '下午学习（刷题 / 真题 / 专业课）' },
-  { time: '17:30–18:30', title: '晚饭 + 散步' },
-  { time: '19:00–21:00', title: '晚间学习（错题整理 + 复盘）' },
-  { time: '21:00–22:30', title: '自由安排 / 运动 / 放松' },
-  { time: '23:00 前', title: '睡觉（保证 7 小时以上睡眠）' },
+const DAY_PLAN: TemplateBlock[] = [
+  { kind: 'routine', minutes: 30, title: '早间作息：起床、洗漱、早餐' },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'routine', minutes: 70, title: '午间作息：午饭 + 午休' },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'routine', minutes: 60, title: '晚间作息：晚饭 + 散步' },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 10 },
+  { kind: 'study', minutes: 50 },
+  { kind: 'break', minutes: 20 },
+  { kind: 'routine', minutes: 30, title: '晚间复盘：整理笔记、错题、明日计划' },
+  { kind: 'routine', minutes: 60, title: '睡前准备：洗漱、放松' },
 ];
+
+function hhmm(totalMinutes: number): string {
+  const dayMinutes = ((totalMinutes % 1440) + 1440) % 1440;
+  const h = Math.floor(dayMinutes / 60);
+  const m = dayMinutes % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+function buildDefaultRoutine(): {
+  time: string;
+  title: string;
+  kind: RoutineKind;
+  durationSec: number;
+}[] {
+  let cursor = 7 * 60 + 30;
+  let studyIndex = 0;
+  const items: {
+    time: string;
+    title: string;
+    kind: RoutineKind;
+    durationSec: number;
+  }[] = [];
+
+  for (const block of DAY_PLAN) {
+    const start = cursor;
+    cursor += block.minutes;
+    if (block.kind === 'study') studyIndex += 1;
+    const title =
+      block.kind === 'study'
+        ? `学习段 ${studyIndex}`
+        : block.kind === 'break'
+          ? `休息 ${block.minutes} 分钟`
+          : block.title ?? '作息';
+    items.push({
+      time: `${hhmm(start)}–${hhmm(cursor)}`,
+      title,
+      kind: block.kind,
+      durationSec: block.kind === 'routine' ? 0 : block.minutes * 60,
+    });
+  }
+
+  items.push({
+    time: '23:00 前',
+    title: '睡觉（保证 7 小时以上）',
+    kind: 'routine',
+    durationSec: 0,
+  });
+  return items;
+}
+
+export const DEFAULT_ROUTINE = buildDefaultRoutine();
 
 export function emptyData(): AppData {
   return {
@@ -24,17 +96,23 @@ export function emptyData(): AppData {
     days: [],
     routine: [],
     checks: {},
+    segmentTimers: {},
+    customTimers: [],
     countdowns: [],
     theme: 'system',
   };
 }
 
-export function makeRoutine(items: { time: string; title: string }[]): RoutineItem[] {
+export function makeRoutine(
+  items: { time: string; title: string; kind?: RoutineKind; durationSec?: number }[]
+): RoutineItem[] {
   return items.map((item, index) => ({
     id: newId(),
     time: item.time,
     title: item.title,
     sort: index,
+    kind: item.kind ?? 'routine',
+    durationSec: Math.max(0, Math.round(item.durationSec ?? 0)),
   }));
 }
 
@@ -48,10 +126,12 @@ export function createSeed(): AppData {
   }));
 
   return {
-    plan: { name: '我的百日计划', startDate: start, totalDays },
+    plan: { name: '我的学习计划', startDate: start, totalDays },
     days,
     routine: makeRoutine(DEFAULT_ROUTINE),
     checks: {},
+    segmentTimers: {},
+    customTimers: [],
     countdowns: [],
     theme: 'system',
   };

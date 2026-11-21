@@ -1,11 +1,11 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "pascal.studyplan"
+    namespace "pascal.thebell"
     compileSdk rootProject.ext.compileSdkVersion
     buildToolsVersion "35.0.0"
     defaultConfig {
-        applicationId "pascal.studyplan"
+        applicationId "pascal.thebell"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

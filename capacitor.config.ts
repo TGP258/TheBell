@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'pascal.studyplan',
-  appName: '百日冲刺',
+  appId: 'pascal.thebell',
+  appName: 'TheBell',
   webDir: 'dist',
   android: {
     backgroundColor: '#f4f4f7',

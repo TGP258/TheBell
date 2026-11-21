@@ -1,10 +1,12 @@
 import type {
   AppData,
   Countdown,
+  CustomTimer,
   PlanMeta,
   RoutineItem,
   Task,
   ThemeMode,
+  TimerState,
 } from '../../types';
 
 export interface StorageDriver {
@@ -16,6 +18,14 @@ export interface StorageDriver {
   upsertRoutine(item: RoutineItem): Promise<void>;
   deleteRoutine(id: number): Promise<void>;
   setCheck(dayIdx: number, routineId: number, done: boolean): Promise<void>;
+  upsertSegmentTimer(
+    dayIdx: number,
+    routineId: number,
+    state: TimerState
+  ): Promise<void>;
+  deleteSegmentTimersForRoutine(routineId: number): Promise<void>;
+  upsertCustomTimer(timer: CustomTimer): Promise<void>;
+  deleteCustomTimer(id: number): Promise<void>;
   upsertCountdown(item: Countdown): Promise<void>;
   deleteCountdown(id: number): Promise<void>;
   setTheme(theme: ThemeMode): Promise<void>;

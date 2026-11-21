@@ -1,13 +1,35 @@
 import type { AppData, ThemeMode } from '../../types';
-import { buildBackup, normalizeBackup } from '../backup';
 import { createSeed } from '../seed';
 import type { StorageDriver } from './driver';
 
-const STORAGE_KEY = 'pascal.studyplan.web.v1';
+const STORAGE_KEY = 'pascal.thebell.web.v1';
+
+function hydrate(raw: unknown): AppData | null {
+  const data = raw as AppData;
+  if (!data || typeof data !== 'object') return null;
+  if (!data.plan || !Array.isArray(data.days) || !Array.isArray(data.routine)) {
+    return null;
+  }
+  data.checks = data.checks ?? {};
+  data.segmentTimers = data.segmentTimers ?? {};
+  data.customTimers = data.customTimers ?? [];
+  data.countdowns = data.countdowns ?? [];
+  data.theme = data.theme ?? 'system';
+  for (const item of data.routine) {
+    item.kind = item.kind ?? 'routine';
+    item.durationSec = item.durationSec ?? 0;
+  }
+  for (const timer of data.customTimers) {
+    timer.remainingSec = timer.remainingSec ?? timer.durationSec;
+    timer.endsAt = timer.endsAt ?? null;
+    timer.color = timer.color ?? 'violet';
+  }
+  return data;
+}
 
 /**
  * 浏览器预览环境的持久化实现。
- * 底层仍按「备份 JSON」结构存储，复用导入校验逻辑；
+ * 直接保存完整 AppData（含运行中的 endsAt），刷新后计时可以继续；
  * 原生端使用真正的 SQLite（见 native.ts）。
  */
 export class WebDriver implements StorageDriver {
@@ -18,9 +40,11 @@ export class WebDriver implements StorageDriver {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const normalized = normalizeBackup(JSON.parse(raw));
-        this.data = normalized.data;
-        return this.data;
+        const stored = hydrate(JSON.parse(raw));
+        if (stored) {
+          this.data = stored;
+          return this.data;
+        }
       }
     } catch {
       // 数据损坏时退回种子数据
@@ -32,7 +56,7 @@ export class WebDriver implements StorageDriver {
 
   private persist(): void {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(buildBackup(this.data)));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
     } catch (error) {
       console.warn('浏览器存储写入失败', error);
     }
@@ -61,6 +85,22 @@ export class WebDriver implements StorageDriver {
   }
 
   async setCheck(): Promise<void> {
+    this.persist();
+  }
+
+  async upsertSegmentTimer(): Promise<void> {
+    this.persist();
+  }
+
+  async deleteSegmentTimersForRoutine(): Promise<void> {
+    this.persist();
+  }
+
+  async upsertCustomTimer(): Promise<void> {
+    this.persist();
+  }
+
+  async deleteCustomTimer(): Promise<void> {
     this.persist();
   }
 

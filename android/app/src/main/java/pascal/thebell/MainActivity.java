@@ -1,4 +1,4 @@
-package pascal.studyplan;
+package pascal.thebell;
 
 import android.os.Bundle;
 

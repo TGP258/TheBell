@@ -4,10 +4,13 @@ import type {
   BackupSummary,
   Category,
   Countdown,
+  CustomTimer,
   Day,
   RoutineItem,
+  RoutineKind,
   Task,
   ThemeMode,
+  TimerState,
 } from '../types';
 import { isCategory, isCountdownColor } from './categories';
 import { addDays, endDate, isDateStr, todayStr } from './date';
@@ -33,16 +36,42 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+function isRoutineKind(value: unknown): value is RoutineKind {
+  return value === 'routine' || value === 'study' || value === 'break';
+}
+
+function inferRoutine(title: string): { kind: RoutineKind; durationSec: number } {
+  if (/作息|睡觉|起床|洗漱|早饭|午饭|晚饭|早餐|午餐|晚餐/.test(title)) {
+    return { kind: 'routine', durationSec: 0 };
+  }
+  if (/休息|放松|散步/.test(title)) return { kind: 'break', durationSec: 600 };
+  if (/学习|上课|刷题|背诵|复习|专注|自习/.test(title)) {
+    return { kind: 'study', durationSec: 3000 };
+  }
+  return { kind: 'routine', durationSec: 0 };
+}
+
+function remainingNow(remainingSec: number, endsAt: number | null): number {
+  if (endsAt) return Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+  return Math.max(0, remainingSec);
+}
+
 export function buildBackup(data: AppData): BackupFile {
   const routine = [...data.routine].sort((a, b) => a.sort - b.sort || a.id - b.id);
+  const routineIndex = new Map(routine.map((item, index) => [item.id, index]));
 
   return {
-    app: 'pascal.studyplan',
-    format: 'studyplan/v1',
+    app: 'pascal.thebell',
+    format: 'thebell/v1',
     version: 'Dev0.1',
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
-    routine: routine.map((item) => ({ time: item.time, title: item.title })),
+    routine: routine.map((item) => ({
+      time: item.time,
+      title: item.title,
+      kind: item.kind,
+      durationSec: item.durationSec,
+    })),
     days: data.days.map((day) => {
       const tasks = [...day.tasks]
         .sort((a, b) => a.sort - b.sort || a.id - b.id)
@@ -64,6 +93,24 @@ export function buildBackup(data: AppData): BackupFile {
       color: item.color,
       pinned: item.pinned,
     })),
+    customTimers: data.customTimers.map((timer) => ({
+      title: timer.title,
+      durationSec: timer.durationSec,
+      remainingSec: remainingNow(timer.remainingSec, timer.endsAt),
+      color: timer.color,
+    })),
+    segmentTimers: Object.entries(data.segmentTimers)
+      .map(([key, state]) => {
+        const [dayIdx, routineId] = key.split(':').map(Number);
+        const routineIndexValue = routineIndex.get(routineId);
+        if (!dayIdx || routineIndexValue === undefined) return null;
+        return {
+          dayIdx,
+          routineIndex: routineIndexValue,
+          remainingSec: remainingNow(state.remainingSec, state.endsAt),
+        };
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null),
     settings: { theme: data.theme },
   };
 }
@@ -91,8 +138,8 @@ export function normalizeBackup(raw: unknown): {
 } {
   const root = asRecord(raw);
   if (!root) throw new Error('备份内容为空或格式不正确');
-  if (root.format !== 'studyplan/v1' && root.app !== 'pascal.studyplan') {
-    throw new Error('这不是「百日冲刺」的计划备份文件');
+  if (root.format !== 'thebell/v1' && root.app !== 'pascal.thebell') {
+    throw new Error('这不是「TheBell」的计划备份文件');
   }
 
   const planRaw = asRecord(root.plan);
@@ -109,9 +156,25 @@ export function normalizeBackup(raw: unknown): {
       if (!record) return null;
       const title = text(record.title);
       if (!title) return null;
-      return { time: text(record.time) || '—', title };
+      const inferred = inferRoutine(title);
+      const kind = isRoutineKind(record.kind) ? record.kind : inferred.kind;
+      let durationSec =
+        kind === 'routine' ? 0 : integer(record.durationSec, inferred.durationSec);
+      if (kind === 'routine') durationSec = 0;
+      else durationSec = clamp(durationSec || inferred.durationSec, 60, 86400);
+      return {
+        time: text(record.time) || '—',
+        title,
+        kind,
+        durationSec,
+      };
     })
-    .filter((item): item is { time: string; title: string } => item !== null);
+    .filter(
+      (
+        item
+      ): item is { time: string; title: string; kind: RoutineKind; durationSec: number } =>
+        item !== null
+    );
 
   const routine: RoutineItem[] = makeRoutine(
     routineSource.length ? routineSource : DEFAULT_ROUTINE
@@ -196,6 +259,45 @@ export function normalizeBackup(raw: unknown): {
     else item.pinned = false;
   }
 
+  const customTimerSource = Array.isArray(root.customTimers) ? root.customTimers : [];
+  const customTimers: CustomTimer[] = [];
+  for (const item of customTimerSource.slice(0, 50)) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const title = text(record.title);
+    const durationSec = clamp(integer(record.durationSec, 0), 1, 86400);
+    if (!title || !durationSec) continue;
+    customTimers.push({
+      id: newId(),
+      title,
+      durationSec,
+      remainingSec: clamp(integer(record.remainingSec, durationSec), 0, durationSec),
+      endsAt: null,
+      color: isCountdownColor(record.color) ? record.color : 'violet',
+      createdAt: Date.now(),
+    });
+  }
+
+  const segmentTimers: Record<string, TimerState> = {};
+  const segmentSource = Array.isArray(root.segmentTimers) ? root.segmentTimers : [];
+  for (const item of segmentSource) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const dayIdx = integer(record.dayIdx, 0);
+    const routineIndex = integer(record.routineIndex, -1);
+    const routineItem = routine[routineIndex];
+    if (!routineItem || routineItem.kind === 'routine') continue;
+    if (dayIdx < 1 || dayIdx > totalDays) continue;
+    segmentTimers[`${dayIdx}:${routineItem.id}`] = {
+      remainingSec: clamp(
+        integer(record.remainingSec, routineItem.durationSec),
+        0,
+        routineItem.durationSec
+      ),
+      endsAt: null,
+    };
+  }
+
   const settings = asRecord(root.settings);
   const themeRaw = settings?.theme;
   const theme: ThemeMode =
@@ -208,6 +310,8 @@ export function normalizeBackup(raw: unknown): {
     days,
     routine,
     checks,
+    segmentTimers,
+    customTimers,
     countdowns,
     theme,
   };

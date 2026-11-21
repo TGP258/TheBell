@@ -12,13 +12,13 @@ export const CATEGORY_META: Record<Category, CategoryMeta> = {
   cs408: { id: 'cs408', name: '专业课', color: 'var(--cs408)', soft: 'rgba(99, 102, 241, 0.12)' },
   english: {
     id: 'english',
-    name: '英语',
+    name: '外语',
     color: 'var(--english)',
     soft: 'rgba(6, 182, 212, 0.12)',
   },
   politics: {
     id: 'politics',
-    name: '政治',
+    name: '公共课',
     color: 'var(--politics)',
     soft: 'rgba(236, 72, 153, 0.12)',
   },

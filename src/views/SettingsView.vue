@@ -65,14 +65,14 @@ const storageLabel = computed(() =>
 );
 const storageDesc = computed(() =>
   store.dbKind === 'sqlite'
-    ? '所有改动实时落盘到 studyplan.db，卸载前不会丢失'
+    ? '所有改动实时落盘到 thebell.db，卸载前不会丢失'
     : '当前是网页预览模式。安装到平板后使用内置 SQLite 持久化'
 );
 
 async function exportPlan(): Promise<void> {
   try {
     const json = serializeBackup(store.data);
-    const filename = `pascal-studyplan-${store.today}.json`;
+    const filename = `thebell-${store.today}.json`;
     if (Capacitor.isNativePlatform()) {
       const result = await Filesystem.writeFile({
         path: filename,
@@ -82,7 +82,7 @@ async function exportPlan(): Promise<void> {
       });
       await Share.share({
         title: '导出计划',
-        text: '百日冲刺计划备份',
+        text: 'TheBell计划备份',
         url: result.uri,
         dialogTitle: '保存或分享备份文件',
       });
@@ -163,7 +163,7 @@ async function handleFile(event: Event): Promise<void> {
     pending.value = parsed;
     askConfirm({
       title: '导入计划',
-      message: `确认用「${parsed.data.plan.name}」替换当前计划？当前的任务、打卡与倒数日都会被覆盖。`,
+      message: `确认用「${parsed.data.plan.name}」替换当前计划？当前的任务、作息、计时与倒数日都会被覆盖。`,
       confirmText: '替换并导入',
       danger: true,
       action: async () => {
@@ -182,7 +182,7 @@ function resetAll(): void {
   pending.value = null;
   askConfirm({
     title: '重置所有数据',
-    message: '将清空当前计划、任务、作息打卡和倒数日，并生成一个从今天开始的 100 天空白计划。此操作不可撤销。',
+    message: '将清空当前计划、任务、作息打卡、计时器和倒数日，并生成一个从今天开始的 100 天默认计划。此操作不可撤销。',
     confirmText: '确认重置',
     danger: true,
     action: async () => {
@@ -264,14 +264,14 @@ function resetAll(): void {
       <section class="card set-card span-2">
         <div class="set-head">
           <h3>数据</h3>
-          <p>JSON 备份包含计划、每天任务、作息时间段、打卡状态和倒数日</p>
+          <p>JSON 备份包含计划、每天任务、作息时间段、分段计时、独立计时器、打卡状态和倒数日</p>
         </div>
         <div class="set-body rows">
           <button class="row-action" @click="exportPlan">
             <span class="ra-icon"><Download :size="18" /></span>
             <span class="ra-text">
               <b>导出计划 JSON</b>
-              <p>生成完整备份，原生端可通过系统分享保存到文件或网盘</p>
+              <p>生成含计时状态的完整备份，原生端可通过系统分享保存</p>
             </span>
             <ChevronRight :size="18" class="ra-arrow" />
           </button>
@@ -334,13 +334,13 @@ function resetAll(): void {
           <div class="about-brand">
             <div class="about-logo">✓</div>
             <div>
-              <b>百日冲刺</b>
-              <p>StudyPlan · 可自定义天数的学习计划与倒数日</p>
+              <b>TheBell</b>
+              <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
             <span class="version-tag">Dev0.1</span>
           </div>
           <ul class="about-meta">
-            <li><span>包名</span><b>pascal.studyplan</b></li>
+            <li><span>包名</span><b>pascal.thebell</b></li>
             <li><span>技术栈</span><b>Vue 3 · Capacitor 7 · SQLite</b></li>
             <li><span>平台</span><b>Android / iPadOS（可移植）</b></li>
           </ul>

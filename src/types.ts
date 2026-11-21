@@ -4,6 +4,9 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 
 export type CountdownColor = 'violet' | 'amber' | 'cyan' | 'pink' | 'green';
 
+/** routine = 起居作息，不计时；study = 学习段；break = 休息段 */
+export type RoutineKind = 'routine' | 'study' | 'break';
+
 export interface Task {
   id: number;
   dayIdx: number;
@@ -26,6 +29,24 @@ export interface RoutineItem {
   time: string;
   title: string;
   sort: number;
+  kind: RoutineKind;
+  durationSec: number;
+}
+
+/** 剩余秒数 + 结束时间戳（运行中时有值，暂停时为 null） */
+export interface TimerState {
+  remainingSec: number;
+  endsAt: number | null;
+}
+
+export interface CustomTimer {
+  id: number;
+  title: string;
+  durationSec: number;
+  remainingSec: number;
+  endsAt: number | null;
+  color: CountdownColor;
+  createdAt: number;
 }
 
 export interface Countdown {
@@ -48,6 +69,9 @@ export interface AppData {
   days: Day[];
   routine: RoutineItem[];
   checks: Record<string, boolean>;
+  /** key = `${dayIdx}:${routineId}` */
+  segmentTimers: Record<string, TimerState>;
+  customTimers: CustomTimer[];
   countdowns: Countdown[];
   theme: ThemeMode;
 }
@@ -72,13 +96,33 @@ export interface BackupDay {
   routineDone?: number[];
 }
 
+export interface BackupRoutine {
+  time: string;
+  title: string;
+  kind?: RoutineKind;
+  durationSec?: number;
+}
+
+export interface BackupCustomTimer {
+  title: string;
+  durationSec: number;
+  remainingSec?: number;
+  color?: CountdownColor;
+}
+
+export interface BackupSegmentTimer {
+  dayIdx: number;
+  routineIndex: number;
+  remainingSec: number;
+}
+
 export interface BackupFile {
   app: string;
   format: string;
   version: string;
   exportedAt: string;
   plan: PlanMeta;
-  routine: { time: string; title: string }[];
+  routine: BackupRoutine[];
   days: BackupDay[];
   countdowns: {
     title: string;
@@ -86,6 +130,8 @@ export interface BackupFile {
     color?: CountdownColor;
     pinned?: boolean;
   }[];
+  customTimers?: BackupCustomTimer[];
+  segmentTimers?: BackupSegmentTimer[];
   settings?: { theme?: ThemeMode };
 }
 

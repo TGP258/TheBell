@@ -1,4 +1,4 @@
-"""Generate launcher icons and splash images for 百日冲刺.
+"""Generate launcher icons and splash images for TheBell.
 
 Requires Pillow. Run from the project root:
     python scripts/generate_assets.py
@@ -92,7 +92,7 @@ def splash(width: int, height: int) -> Image.Image:
     y = int(height * 0.5 - mark * 0.72)
     image.paste(icon, (x, y), icon)
 
-    text = "百日冲刺"
+    text = "TheBell"
     font_size = max(18, int(mark * 0.26))
     try:
         font = ImageFont.truetype(FONT_BOLD, font_size)

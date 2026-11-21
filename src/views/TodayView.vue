@@ -8,8 +8,11 @@ import {
   Clock3,
   Flame,
   Moon,
+  Pause,
   Pencil,
+  Play,
   Plus,
+  RotateCcw,
   SlidersHorizontal,
   Sun,
   Target,
@@ -120,6 +123,21 @@ function openRoutineDialog(item: RoutineItem | null): void {
   routineDialogOpen.value = true;
 }
 
+function kindName(kind: RoutineItem['kind']): string {
+  if (kind === 'study') return '学习';
+  if (kind === 'break') return '休息';
+  return '作息';
+}
+
+function fmtSec(total: number): string {
+  const value = Math.max(0, Math.round(total));
+  const h = Math.floor(value / 3600);
+  const m = Math.floor((value % 3600) / 60);
+  const s = value % 60;
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+
 async function removeRoutine(item: RoutineItem): Promise<void> {
   await store.deleteRoutine(item.id);
   toast('作息已删除', 'info');
@@ -227,7 +245,7 @@ const editingTask = computed(() =>
         </span>
         <div>
           <b class="num">{{ routineDone }}/{{ store.routineCount }}</b>
-          <span>作息打卡</span>
+          <span>节奏完成</span>
         </div>
       </div>
       <div class="stat">
@@ -316,7 +334,7 @@ const editingTask = computed(() =>
 
       <section class="card routine-card">
         <div class="section-head">
-          <h3>每日作息 <span class="cnt num">{{ routineDone }}/{{ store.routineCount }}</span></h3>
+          <h3>今日节奏 <span class="cnt num">{{ routineDone }}/{{ store.routineCount }}</span></h3>
           <span class="spacer" />
           <button
             class="mini-link"
@@ -328,62 +346,104 @@ const editingTask = computed(() =>
         </div>
 
         <div v-if="day" class="routine-body">
-          <div
-            v-for="(item, index) in store.routine"
-            :key="item.id"
-            class="rt-row"
-            :class="{ done: store.isRoutineDone(day.idx, item.id), managing: manageRoutine }"
-          >
-            <div class="rt-time num" @click="manageRoutine ? openRoutineDialog(item) : store.toggleCheck(day.idx, item.id)">
-              {{ item.time }}
-            </div>
-            <div class="rt-rail"><span /></div>
-            <div class="rt-body">
-              <button
-                class="rt-title"
-                @click="manageRoutine ? openRoutineDialog(item) : store.toggleCheck(day.idx, item.id)"
-              >
-                {{ item.title }}
-              </button>
-              <div v-if="manageRoutine" class="rt-actions">
+          <div v-if="store.routine.length" class="seg-grid">
+            <div
+              v-for="(item, index) in store.routine"
+              :key="item.id"
+              class="seg-card"
+              :class="[
+                item.kind,
+                {
+                  full: item.kind === 'routine',
+                  done: store.isRoutineDone(day.idx, item.id),
+                  running: store.segmentRunning(day.idx, item.id),
+                  managing: manageRoutine,
+                },
+              ]"
+            >
+              <div class="seg-head">
+                <span class="seg-kind">{{ kindName(item.kind) }}</span>
+                <span class="seg-time num">{{ item.time }}</span>
+                <button
+                  v-if="!manageRoutine"
+                  class="seg-check"
+                  :class="{ on: store.isRoutineDone(day.idx, item.id) }"
+                  :aria-label="store.isRoutineDone(day.idx, item.id) ? '取消打卡' : '打卡'"
+                  @click="store.toggleCheck(day.idx, item.id)"
+                >
+                  <Check :size="12" :stroke-width="3.2" />
+                </button>
+              </div>
+
+              <div class="seg-title">{{ item.title }}</div>
+
+              <template v-if="item.kind !== 'routine'">
+                <div class="seg-timer">
+                  <span
+                    v-if="store.segmentRunning(day.idx, item.id)"
+                    class="seg-live"
+                    aria-hidden="true"
+                  />
+                  <span class="seg-clock num">
+                    {{ fmtSec(store.segmentRemaining(day.idx, item.id)) }}
+                  </span>
+                  <div class="seg-actions">
+                    <button
+                      class="seg-play"
+                      :class="{ on: store.segmentRunning(day.idx, item.id) }"
+                      :title="store.segmentRunning(day.idx, item.id) ? '暂停' : '开始'"
+                      @click="store.toggleSegment(day.idx, item.id)"
+                    >
+                      <Pause v-if="store.segmentRunning(day.idx, item.id)" :size="13" />
+                      <Play v-else :size="13" />
+                    </button>
+                    <button
+                      class="seg-reset"
+                      title="重置"
+                      @click="store.resetSegment(day.idx, item.id)"
+                    >
+                      <RotateCcw :size="13" />
+                    </button>
+                  </div>
+                </div>
+                <div class="seg-bar">
+                  <i :style="{ width: store.segmentProgress(day.idx, item.id) + '%' }" />
+                </div>
+              </template>
+
+              <div v-if="manageRoutine" class="seg-manage">
                 <button :disabled="index === 0" title="上移" @click="store.moveRoutine(item.id, -1)">
-                  <ArrowUp :size="14" />
+                  <ArrowUp :size="13" />
                 </button>
                 <button
                   :disabled="index === store.routine.length - 1"
                   title="下移"
                   @click="store.moveRoutine(item.id, 1)"
                 >
-                  <ArrowDown :size="14" />
+                  <ArrowDown :size="13" />
                 </button>
                 <button title="编辑" @click="openRoutineDialog(item)">
-                  <Pencil :size="14" />
+                  <Pencil :size="13" />
                 </button>
                 <button class="danger" title="删除" @click="removeRoutine(item)">
-                  <Trash2 :size="14" />
+                  <Trash2 :size="13" />
                 </button>
               </div>
             </div>
-            <button
-              v-if="!manageRoutine"
-              class="rt-check"
-              :class="{ on: store.isRoutineDone(day.idx, item.id) }"
-              @click="store.toggleCheck(day.idx, item.id)"
-            >
-              <Check :size="13" :stroke-width="3.2" />
-            </button>
           </div>
 
           <div v-if="!store.routine.length" class="empty">
             <span class="empty-icon"><Clock3 :size="24" /></span>
-            <b>还没有作息安排</b>
-            <p>把每天固定的时间块列出来，逐项打卡。</p>
+            <b>还没有时间段</b>
+            <p>添加学习段与休息段，按自己的节奏安排一天。</p>
           </div>
 
           <button class="add-inline" @click="openRoutineDialog(null)">
-            <Plus :size="16" /> 添加作息
+            <Plus :size="16" /> 添加时间段
           </button>
-          <p class="rt-note">作息打卡按天独立保存，时间与内容可随时修改。</p>
+          <p class="rt-note">
+            学习与休息段可独立倒计时、暂停、重置；起居作息只打卡不计时。所有状态按天保存。
+          </p>
         </div>
       </section>
     </div>
@@ -702,130 +762,223 @@ const editingTask = computed(() =>
   background: var(--primary-soft);
 }
 
-/* ---------- Routine ---------- */
+/* ---------- Routine segments ---------- */
 .routine-body {
   padding: 0 16px 16px;
 }
-.rt-row {
+.seg-grid {
   display: grid;
-  grid-template-columns: 78px 18px minmax(0, 1fr) 26px;
-  align-items: flex-start;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.seg-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
   gap: 4px;
-  padding: 9px 4px;
-  border-radius: 12px;
-  transition: background 0.15s ease;
-}
-.rt-row:hover {
+  padding: 10px 11px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
   background: var(--surface-2);
+  overflow: hidden;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
-.rt-row.managing {
-  grid-template-columns: 78px 18px minmax(0, 1fr);
+.seg-card.study {
+  border-left-color: var(--primary);
 }
-.rt-time {
-  font-size: 11px;
+.seg-card.break {
+  border-left-color: var(--success);
+}
+.seg-card.routine {
+  border-left-color: var(--border-strong);
+  background: var(--surface);
+}
+.seg-card.full {
+  grid-column: 1 / -1;
+}
+.seg-card.running {
+  border-color: var(--primary);
+  background: var(--primary-soft-2);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+.seg-card.done .seg-title {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+.seg-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+}
+.seg-kind {
+  font-size: 9.5px;
   font-weight: 700;
-  color: var(--primary);
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  color: var(--muted);
+  flex: none;
+}
+.seg-card.study .seg-kind {
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+}
+.seg-card.break .seg-kind {
+  color: #0a7a47;
+  background: var(--success-soft);
+}
+html[data-theme="dark"] .seg-card.break .seg-kind {
+  color: var(--success);
+}
+.seg-time {
+  font-size: 9.5px;
   font-family: var(--font-mono);
-  padding-top: 4px;
-  cursor: pointer;
+  color: var(--muted);
+  margin-left: auto;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.rt-rail {
-  position: relative;
-  display: flex;
-  justify-content: center;
-  align-self: stretch;
-}
-.rt-rail::before {
-  content: "";
-  position: absolute;
-  top: 12px;
-  bottom: -14px;
-  width: 1px;
-  background: var(--border);
-}
-.rt-row:last-of-type .rt-rail::before {
-  display: none;
-}
-.rt-rail span {
-  width: 7px;
-  height: 7px;
-  border-radius: 99px;
-  background: var(--border-strong);
-  margin-top: 7px;
-  position: relative;
-  z-index: 1;
-  transition: background 0.18s ease, box-shadow 0.18s ease;
-}
-.rt-row.done .rt-rail span {
-  background: var(--success);
-  box-shadow: 0 0 0 3px var(--success-soft);
-}
-.rt-body {
-  min-width: 0;
-}
-.rt-title {
-  display: block;
-  text-align: left;
-  font-size: 13px;
-  line-height: 1.55;
-  color: var(--text-2);
-  padding-top: 1px;
-  transition: color 0.15s ease;
-}
-.rt-row.done .rt-title {
-  color: var(--faint);
-  text-decoration: line-through;
-}
-.rt-row.managing .rt-title {
-  color: var(--text);
-}
-.rt-check {
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
+.seg-check {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  border-radius: 7px;
   border: 1.5px solid var(--border-strong);
   display: grid;
   place-items: center;
   color: #fff;
-  margin-top: 1px;
+  background: transparent;
   transition: all 0.16s ease;
 }
-.rt-check :deep(svg) {
+.seg-check :deep(svg) {
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transform: scale(0.6);
+  transition: all 0.15s ease;
 }
-.rt-check.on {
+.seg-check.on {
   background: var(--success);
   border-color: var(--success);
 }
-.rt-check.on :deep(svg) {
+.seg-check.on :deep(svg) {
   opacity: 1;
+  transform: scale(1);
 }
-.rt-actions {
+.seg-title {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-2);
+  word-break: break-word;
+}
+.seg-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+.seg-live {
+  width: 5px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+  flex: none;
+  animation: seg-pulse 1.4s ease-in-out infinite;
+}
+@keyframes seg-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.seg-clock {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.seg-card.running .seg-clock {
+  color: var(--primary-strong);
+}
+.seg-actions {
   display: flex;
   gap: 4px;
-  margin-top: 6px;
+  margin-left: auto;
 }
-.rt-actions button {
-  width: 26px;
-  height: 26px;
+.seg-play,
+.seg-reset {
+  width: 25px;
+  height: 25px;
   border-radius: 8px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-2);
+}
+.seg-play {
+  background: var(--primary-soft);
+  border-color: transparent;
+  color: var(--primary-strong);
+}
+.seg-play.on {
+  background: var(--primary);
+  color: #fff;
+}
+.seg-play:hover,
+.seg-reset:hover {
+  filter: brightness(0.97);
+}
+.seg-bar {
+  height: 3px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  overflow: hidden;
+  margin-top: 3px;
+}
+.seg-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--primary), #a855f7);
+  transition: width 0.8s linear;
+}
+.seg-card.break .seg-bar i {
+  background: linear-gradient(90deg, var(--success), #34d399);
+}
+.seg-manage {
+  display: flex;
+  gap: 4px;
+  margin-top: 5px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.seg-manage button {
+  width: 25px;
+  height: 25px;
+  border-radius: 7px;
   display: grid;
   place-items: center;
   color: var(--muted);
   background: var(--surface-3);
 }
-.rt-actions button:hover {
+.seg-manage button:hover {
   color: var(--text);
 }
-.rt-actions button.danger:hover {
+.seg-manage button.danger:hover {
   color: var(--danger);
   background: var(--danger-soft);
 }
-.rt-actions button:disabled {
+.seg-manage button:disabled {
   opacity: 0.35;
   pointer-events: none;
 }
@@ -884,14 +1037,16 @@ const editingTask = computed(() =>
   .stat span {
     font-size: 10.5px;
   }
-  .rt-row {
-    grid-template-columns: 64px 14px minmax(0, 1fr) 24px;
+  .seg-clock {
+    font-size: 17px;
   }
-  .rt-time {
-    font-size: 10px;
+  .seg-kind {
+    font-size: 9px;
   }
-  .rt-title {
-    font-size: 12.5px;
+}
+@container (max-width: 460px) {
+  .seg-grid {
+    grid-template-columns: 1fr;
   }
 }
 @container (max-width: 430px) {

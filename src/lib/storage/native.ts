@@ -4,10 +4,13 @@ import type {
   Category,
   Countdown,
   CountdownColor,
+  CustomTimer,
   PlanMeta,
   RoutineItem,
+  RoutineKind,
   Task,
   ThemeMode,
+  TimerState,
 } from '../../types';
 import { isCategory, isCountdownColor } from '../categories';
 import { buildDates, isDateStr, todayStr } from '../date';
@@ -63,13 +66,31 @@ const SCHEMA: string[] = [
      id INTEGER PRIMARY KEY,
      time_text TEXT NOT NULL,
      title TEXT NOT NULL,
-     sort INTEGER NOT NULL
+     sort INTEGER NOT NULL,
+     kind TEXT NOT NULL DEFAULT 'routine',
+     duration_sec INTEGER NOT NULL DEFAULT 0
    )`,
   `CREATE TABLE IF NOT EXISTS routine_check (
      day_idx INTEGER NOT NULL,
      routine_id INTEGER NOT NULL,
      done INTEGER NOT NULL DEFAULT 0,
      PRIMARY KEY (day_idx, routine_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS segment_timer (
+     day_idx INTEGER NOT NULL,
+     routine_id INTEGER NOT NULL,
+     remaining_sec INTEGER NOT NULL DEFAULT 0,
+     ends_at INTEGER,
+     PRIMARY KEY (day_idx, routine_id)
+   )`,
+  `CREATE TABLE IF NOT EXISTS custom_timer (
+     id INTEGER PRIMARY KEY,
+     title TEXT NOT NULL,
+     duration_sec INTEGER NOT NULL,
+     remaining_sec INTEGER NOT NULL,
+     ends_at INTEGER,
+     color TEXT NOT NULL DEFAULT 'violet',
+     created_at INTEGER
    )`,
   `CREATE TABLE IF NOT EXISTS countdown (
      id INTEGER PRIMARY KEY,
@@ -108,11 +129,30 @@ interface RoutineRow {
   time_text: string;
   title: string;
   sort: number;
+  kind: string;
+  duration_sec: number;
 }
 
 interface CheckRow {
   day_idx: number;
   routine_id: number;
+}
+
+interface SegmentTimerRow {
+  day_idx: number;
+  routine_id: number;
+  remaining_sec: number;
+  ends_at: number | null;
+}
+
+interface CustomTimerRow {
+  id: number;
+  title: string;
+  duration_sec: number;
+  remaining_sec: number;
+  ends_at: number | null;
+  color: string;
+  created_at: number | null;
 }
 
 interface CountdownRow {
@@ -128,6 +168,14 @@ interface MetaRow {
   value: string;
 }
 
+interface ColumnRow {
+  name: string;
+}
+
+function isRoutineKind(value: unknown): value is RoutineKind {
+  return value === 'routine' || value === 'study' || value === 'break';
+}
+
 export class NativeDriver implements StorageDriver {
   readonly kind = 'sqlite' as const;
 
@@ -140,8 +188,39 @@ export class NativeDriver implements StorageDriver {
     return PascalDb.run({ sql, args });
   }
 
+  private async ensureRoutineColumns(): Promise<void> {
+    const columns = await this.query<ColumnRow>('PRAGMA table_info(routine)');
+    const names = new Set(columns.map((column) => column.name));
+    let migrated = false;
+
+    if (!names.has('kind')) {
+      await this.run(
+        "ALTER TABLE routine ADD COLUMN kind TEXT NOT NULL DEFAULT 'routine'"
+      );
+      migrated = true;
+    }
+    if (!names.has('duration_sec')) {
+      await this.run(
+        'ALTER TABLE routine ADD COLUMN duration_sec INTEGER NOT NULL DEFAULT 0'
+      );
+      migrated = true;
+    }
+    if (migrated) {
+      // 旧版本只有 time/title，按内容推断学习/休息段
+      await this.run(
+        `UPDATE routine SET kind = 'study', duration_sec = 3000
+         WHERE kind = 'routine' AND (title LIKE '%学习%' OR title LIKE '%上课%' OR title LIKE '%刷题%')`
+      );
+      await this.run(
+        `UPDATE routine SET kind = 'break', duration_sec = 600
+         WHERE kind = 'routine' AND (title LIKE '%休息%' OR title LIKE '%放松%')`
+      );
+    }
+  }
+
   async init(): Promise<AppData> {
     for (const sql of SCHEMA) await this.run(sql);
+    await this.ensureRoutineColumns();
 
     const plans = await this.query<PlanRow>(
       'SELECT name, start_date, total_days FROM plan WHERE id = 1'
@@ -172,10 +251,16 @@ export class NativeDriver implements StorageDriver {
       'SELECT id, day_idx, category, title, done, sort, created_at, done_at FROM task ORDER BY day_idx, sort, id'
     );
     const routineRows = await this.query<RoutineRow>(
-      'SELECT id, time_text, title, sort FROM routine ORDER BY sort, id'
+      'SELECT id, time_text, title, sort, kind, duration_sec FROM routine ORDER BY sort, id'
     );
     const checkRows = await this.query<CheckRow>(
       'SELECT day_idx, routine_id FROM routine_check WHERE done = 1'
+    );
+    const segmentRows = await this.query<SegmentTimerRow>(
+      'SELECT day_idx, routine_id, remaining_sec, ends_at FROM segment_timer'
+    );
+    const customRows = await this.query<CustomTimerRow>(
+      'SELECT id, title, duration_sec, remaining_sec, ends_at, color, created_at FROM custom_timer ORDER BY created_at, id'
     );
     const countdownRows = await this.query<CountdownRow>(
       'SELECT id, title, target_date, color, pinned, created_at FROM countdown ORDER BY pinned DESC, id'
@@ -208,15 +293,47 @@ export class NativeDriver implements StorageDriver {
       tasks: tasksByDay.get(index + 1) ?? [],
     }));
 
-    const routine: RoutineItem[] = routineRows.map((row) => ({
-      id: row.id,
-      time: row.time_text,
-      title: row.title,
-      sort: row.sort,
-    }));
+    const routine: RoutineItem[] = routineRows.map((row) => {
+      const kind: RoutineKind = isRoutineKind(row.kind) ? row.kind : 'routine';
+      const duration =
+        kind === 'routine'
+          ? 0
+          : Math.max(
+              60,
+              Math.round(
+                row.duration_sec || (kind === 'break' ? 600 : 3000)
+              )
+            );
+      return {
+        id: row.id,
+        time: row.time_text,
+        title: row.title,
+        sort: row.sort,
+        kind,
+        durationSec: duration,
+      };
+    });
 
     const checks: Record<string, boolean> = {};
     for (const row of checkRows) checks[`${row.day_idx}:${row.routine_id}`] = true;
+
+    const segmentTimers: Record<string, TimerState> = {};
+    for (const row of segmentRows) {
+      segmentTimers[`${row.day_idx}:${row.routine_id}`] = {
+        remainingSec: Math.max(0, row.remaining_sec),
+        endsAt: row.ends_at ?? null,
+      };
+    }
+
+    const customTimers: CustomTimer[] = customRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      durationSec: Math.max(1, row.duration_sec),
+      remainingSec: Math.max(0, row.remaining_sec),
+      endsAt: row.ends_at ?? null,
+      color: isCountdownColor(row.color) ? row.color : 'violet',
+      createdAt: row.created_at ?? Date.now(),
+    }));
 
     const countdowns: Countdown[] = countdownRows
       .filter((row) => isDateStr(row.target_date))
@@ -235,7 +352,16 @@ export class NativeDriver implements StorageDriver {
         ? themeValue
         : 'system';
 
-    return { plan, days, routine, checks, countdowns, theme };
+    return {
+      plan,
+      days,
+      routine,
+      checks,
+      segmentTimers,
+      customTimers,
+      countdowns,
+      theme,
+    };
   }
 
   async setPlan(plan: PlanMeta, dates: string[]): Promise<void> {
@@ -248,6 +374,7 @@ export class NativeDriver implements StorageDriver {
       },
       { sql: 'DELETE FROM task WHERE day_idx > ?', args: [total] },
       { sql: 'DELETE FROM routine_check WHERE day_idx > ?', args: [total] },
+      { sql: 'DELETE FROM segment_timer WHERE day_idx > ?', args: [total] },
       { sql: 'DELETE FROM day WHERE idx > ?', args: [total] },
       ...dates.map((date, index) => ({
         sql: 'INSERT OR REPLACE INTO day(idx, date) VALUES(?, ?)',
@@ -280,8 +407,9 @@ export class NativeDriver implements StorageDriver {
 
   async upsertRoutine(item: RoutineItem): Promise<void> {
     await this.run(
-      `INSERT OR REPLACE INTO routine(id, time_text, title, sort) VALUES(?, ?, ?, ?)`,
-      [item.id, item.time, item.title, item.sort]
+      `INSERT OR REPLACE INTO routine(id, time_text, title, sort, kind, duration_sec)
+       VALUES(?, ?, ?, ?, ?, ?)`,
+      [item.id, item.time, item.title, item.sort, item.kind, item.durationSec]
     );
   }
 
@@ -290,15 +418,52 @@ export class NativeDriver implements StorageDriver {
       statements: [
         { sql: 'DELETE FROM routine WHERE id = ?', args: [id] },
         { sql: 'DELETE FROM routine_check WHERE routine_id = ?', args: [id] },
+        { sql: 'DELETE FROM segment_timer WHERE routine_id = ?', args: [id] },
       ],
     });
   }
 
   async setCheck(dayIdx: number, routineId: number, done: boolean): Promise<void> {
     await this.run(
-      `INSERT OR REPLACE INTO routine_check(day_idx, routine_id, done) VALUES(?, ?, ?)`,
+      'INSERT OR REPLACE INTO routine_check(day_idx, routine_id, done) VALUES(?, ?, ?)',
       [dayIdx, routineId, done ? 1 : 0]
     );
+  }
+
+  async upsertSegmentTimer(
+    dayIdx: number,
+    routineId: number,
+    state: TimerState
+  ): Promise<void> {
+    await this.run(
+      `INSERT OR REPLACE INTO segment_timer(day_idx, routine_id, remaining_sec, ends_at)
+       VALUES(?, ?, ?, ?)`,
+      [dayIdx, routineId, Math.max(0, Math.round(state.remainingSec)), state.endsAt]
+    );
+  }
+
+  async deleteSegmentTimersForRoutine(routineId: number): Promise<void> {
+    await this.run('DELETE FROM segment_timer WHERE routine_id = ?', [routineId]);
+  }
+
+  async upsertCustomTimer(timer: CustomTimer): Promise<void> {
+    await this.run(
+      `INSERT OR REPLACE INTO custom_timer(id, title, duration_sec, remaining_sec, ends_at, color, created_at)
+       VALUES(?, ?, ?, ?, ?, ?, ?)`,
+      [
+        timer.id,
+        timer.title,
+        timer.durationSec,
+        Math.max(0, Math.round(timer.remainingSec)),
+        timer.endsAt,
+        timer.color,
+        timer.createdAt,
+      ]
+    );
+  }
+
+  async deleteCustomTimer(id: number): Promise<void> {
+    await this.run('DELETE FROM custom_timer WHERE id = ?', [id]);
   }
 
   async upsertCountdown(item: Countdown): Promise<void> {
@@ -331,6 +496,8 @@ export class NativeDriver implements StorageDriver {
     const statements: Statement[] = [
       { sql: 'DELETE FROM task' },
       { sql: 'DELETE FROM routine_check' },
+      { sql: 'DELETE FROM segment_timer' },
+      { sql: 'DELETE FROM custom_timer' },
       { sql: 'DELETE FROM day' },
       { sql: 'DELETE FROM routine' },
       { sql: 'DELETE FROM countdown' },
@@ -372,8 +539,8 @@ export class NativeDriver implements StorageDriver {
 
     for (const item of data.routine) {
       statements.push({
-        sql: 'INSERT OR REPLACE INTO routine(id, time_text, title, sort) VALUES(?, ?, ?, ?)',
-        args: [item.id, item.time, item.title, item.sort],
+        sql: 'INSERT OR REPLACE INTO routine(id, time_text, title, sort, kind, duration_sec) VALUES(?, ?, ?, ?, ?, ?)',
+        args: [item.id, item.time, item.title, item.sort, item.kind, item.durationSec],
       });
     }
 
@@ -384,6 +551,32 @@ export class NativeDriver implements StorageDriver {
       statements.push({
         sql: 'INSERT OR REPLACE INTO routine_check(day_idx, routine_id, done) VALUES(?, ?, 1)',
         args: [dayIdx, routineId],
+      });
+    }
+
+    for (const key of Object.keys(data.segmentTimers)) {
+      const state = data.segmentTimers[key];
+      const [dayIdx, routineId] = key.split(':').map(Number);
+      if (!dayIdx || !routineId || !state) continue;
+      statements.push({
+        sql: 'INSERT OR REPLACE INTO segment_timer(day_idx, routine_id, remaining_sec, ends_at) VALUES(?, ?, ?, ?)',
+        args: [dayIdx, routineId, Math.max(0, Math.round(state.remainingSec)), state.endsAt],
+      });
+    }
+
+    for (const timer of data.customTimers) {
+      statements.push({
+        sql: `INSERT OR REPLACE INTO custom_timer(id, title, duration_sec, remaining_sec, ends_at, color, created_at)
+              VALUES(?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          timer.id,
+          timer.title,
+          timer.durationSec,
+          Math.max(0, Math.round(timer.remainingSec)),
+          timer.endsAt,
+          timer.color,
+          timer.createdAt,
+        ],
       });
     }
 

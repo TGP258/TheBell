@@ -1,4 +1,4 @@
-package pascal.studyplan;
+package pascal.thebell;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -30,7 +30,7 @@ public class PascalDbPlugin extends Plugin {
 
     private static class DbHelper extends SQLiteOpenHelper {
         DbHelper(Context context) {
-            super(context, "studyplan.db", null, 1);
+            super(context, "thebell.db", null, 1);
         }
 
         @Override
