@@ -8,6 +8,7 @@ import type {
   CustomTimer,
   Day,
   DayProgress,
+  HomeLayout,
   PlanMeta,
   RoutineItem,
   RoutineKind,
@@ -139,6 +140,39 @@ export const usePlanStore = defineStore('plan', () => {
   const pinnedCountdown = computed(
     () => data.value.countdowns.find((item) => item.pinned) ?? data.value.countdowns[0] ?? null
   );
+
+  /** 首页布局 */
+  const home = computed(() => data.value.home);
+  const visibleHomeCards = computed(() => home.value.cards.filter((card) => card.visible));
+  const homeFull = computed(() => visibleHomeCards.value.filter((card) => card.zone === 'full'));
+  const homeLeft = computed(() => visibleHomeCards.value.filter((card) => card.zone === 'left'));
+  const homeRight = computed(() => visibleHomeCards.value.filter((card) => card.zone === 'right'));
+  const heroCountdown = computed(() => {
+    const id = home.value.heroCountdownId;
+    const picked = id ? data.value.countdowns.find((item) => item.id === id) : null;
+    return picked ?? pinnedCountdown.value;
+  });
+  const homeTimers = computed(() =>
+    home.value.timerIds
+      .map((id) => customTimers.value.find((timer) => timer.id === id))
+      .filter((timer): timer is CustomTimer => Boolean(timer))
+  );
+  const homeCountdowns = computed(() =>
+    home.value.countdownIds
+      .map((id) => data.value.countdowns.find((item) => item.id === id))
+      .filter((item): item is Countdown => Boolean(item))
+  );
+
+  async function saveHome(next: HomeLayout): Promise<void> {
+    data.value.home = {
+      cards: next.cards.map((card) => ({ ...card })),
+      heroCountdownId: next.heroCountdownId,
+      heroTheme: next.heroTheme,
+      timerIds: [...next.timerIds],
+      countdownIds: [...next.countdownIds],
+    };
+    await requireDriver().setHome(data.value.home);
+  }
 
   const streak = computed(() => {
     const total = plan.value.totalDays;
@@ -742,6 +776,15 @@ export const usePlanStore = defineStore('plan', () => {
     overallPct,
     completedDays,
     pinnedCountdown,
+    home,
+    visibleHomeCards,
+    homeFull,
+    homeLeft,
+    homeRight,
+    heroCountdown,
+    homeTimers,
+    homeCountdowns,
+    saveHome,
     streak,
     getDay,
     dayProgress,

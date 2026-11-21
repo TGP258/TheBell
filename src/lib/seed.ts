@@ -1,5 +1,6 @@
 import type { AppData, Day, RoutineItem, RoutineKind } from '../types';
 import { buildDates, todayStr } from './date';
+import { defaultHome } from './home';
 import { newId } from './id';
 import { durationFromRange, parseRange, rangeText, normalizeRange } from './segment';
 
@@ -97,6 +98,7 @@ export function emptyData(): AppData {
     segmentTimers: {},
     customTimers: [],
     countdowns: [],
+    home: defaultHome(),
     theme: 'system',
   };
 }
@@ -158,6 +160,7 @@ export function createSeed(): AppData {
     segmentTimers: {},
     customTimers: [],
     countdowns: [],
+    home: defaultHome(),
     theme: 'system',
   };
 }

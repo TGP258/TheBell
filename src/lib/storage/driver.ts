@@ -2,6 +2,7 @@ import type {
   AppData,
   Countdown,
   CustomTimer,
+  HomeLayout,
   PlanMeta,
   RoutineItem,
   Task,
@@ -29,5 +30,6 @@ export interface StorageDriver {
   upsertCountdown(item: Countdown): Promise<void>;
   deleteCountdown(id: number): Promise<void>;
   setTheme(theme: ThemeMode): Promise<void>;
+  setHome(layout: HomeLayout): Promise<void>;
   replaceAll(data: AppData): Promise<void>;
 }

@@ -5,6 +5,7 @@ import type {
   Countdown,
   CountdownColor,
   CustomTimer,
+  HomeLayout,
   PlanMeta,
   RoutineItem,
   RoutineKind,
@@ -14,6 +15,7 @@ import type {
 } from '../../types';
 import { isCategory, isCountdownColor } from '../categories';
 import { buildDates, isDateStr, todayStr } from '../date';
+import { normalizeHome } from '../home';
 import {
   durationFromRange,
   normalizeRange,
@@ -284,6 +286,9 @@ export class NativeDriver implements StorageDriver {
     const themeRows = await this.query<MetaRow>(
       "SELECT value FROM meta WHERE key = 'theme'"
     );
+    const homeRows = await this.query<MetaRow>(
+      "SELECT value FROM meta WHERE key = 'home_layout'"
+    );
 
     const tasksByDay = new Map<number, Task[]>();
     for (const row of taskRows) {
@@ -389,6 +394,15 @@ export class NativeDriver implements StorageDriver {
         ? themeValue
         : 'system';
 
+    let home = normalizeHome(undefined);
+    if (homeRows[0]?.value) {
+      try {
+        home = normalizeHome(JSON.parse(homeRows[0].value));
+      } catch {
+        // 配置损坏时用默认布局
+      }
+    }
+
     return {
       plan,
       days,
@@ -397,6 +411,7 @@ export class NativeDriver implements StorageDriver {
       segmentTimers,
       customTimers,
       countdowns,
+      home,
       theme,
     };
   }
@@ -538,6 +553,13 @@ export class NativeDriver implements StorageDriver {
     ]);
   }
 
+  async setHome(layout: HomeLayout): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
+      'home_layout',
+      JSON.stringify(layout),
+    ]);
+  }
+
   async replaceAll(data: AppData): Promise<void> {
     const statements: Statement[] = [
       { sql: 'DELETE FROM task' },
@@ -557,6 +579,10 @@ export class NativeDriver implements StorageDriver {
       {
         sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
         args: ['theme', data.theme],
+      },
+      {
+        sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
+        args: ['home_layout', JSON.stringify(data.home)],
       },
     ];
 

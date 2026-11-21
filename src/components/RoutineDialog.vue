@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { ArrowRight, Clock3, Trash2 } from 'lucide-vue-next';
 import type { RoutineItem, RoutineKind } from '../types';
 import { usePlanStore } from '../stores/plan';
@@ -13,6 +13,7 @@ import {
   rangeMinutes,
 } from '../lib/segment';
 import AppModal from './AppModal.vue';
+import TimePicker from './TimePicker.vue';
 
 const props = defineProps<{
   open: boolean;
@@ -26,7 +27,7 @@ const start = ref('08:00');
 const end = ref('08:50');
 const title = ref('');
 const kind = ref<RoutineKind>('study');
-const startInput = ref<HTMLInputElement | null>(null);
+const pickerFor = ref<'start' | 'end' | null>(null);
 
 const KIND_OPTIONS: { id: RoutineKind; name: string; desc: string }[] = [
   { id: 'routine', name: '起居作息', desc: '只打卡，不计时' },
@@ -80,9 +81,6 @@ watch(
       start.value = clockText(startMin);
       end.value = clockText(startMin + 50);
     }
-
-    await nextTick();
-    startInput.value?.focus();
   }
 );
 
@@ -115,30 +113,28 @@ function clearTime(): void {
   end.value = '';
 }
 
-/** 手输时把 830 / 8:3 规整成 08:30，无冒号也能识别 */
-function tidy(value: string): string {
-  const raw = value.trim();
-  if (!raw) return '';
-  const digits = raw.replace(/\D/g, '');
-  if (!digits) return '';
-  if (!raw.includes(':') && !raw.includes('：')) {
-    if (digits.length <= 2) return raw;
-    const h = digits.slice(0, digits.length - 2);
-    const m = digits.slice(-2);
-    const hh = Number(h);
-    const mm = Number(m);
-    if (hh <= 23 && mm <= 59) {
-      return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
-    }
-    return raw;
-  }
-  const parsed = parseClock(raw.replace('：', ':'));
-  return parsed === null ? raw : clockText(parsed);
+function openPicker(which: 'start' | 'end'): void {
+  pickerFor.value = which;
 }
 
-function onTimeBlur(which: 'start' | 'end'): void {
-  if (which === 'start') start.value = tidy(start.value);
-  else end.value = tidy(end.value);
+function applyPicked(value: string): void {
+  if (pickerFor.value === 'start') {
+    // 改开始时间时保持原时长，结束时间跟着平移
+    const prevStart = parseClock(start.value);
+    const prevEnd = parseClock(end.value);
+    let duration = 50;
+    if (prevStart !== null && prevEnd !== null) {
+      duration = prevEnd > prevStart ? prevEnd - prevStart : prevEnd + 1440 - prevStart;
+    }
+    const next = parseClock(value) ?? prevStart ?? defaultStart();
+    start.value = value;
+    if (kind.value !== 'routine') {
+      end.value = clockText(next + (duration > 0 ? duration : 50));
+    }
+  } else if (pickerFor.value === 'end') {
+    end.value = value;
+  }
+  pickerFor.value = null;
 }
 
 function close(): void {
@@ -204,26 +200,27 @@ async function remove(): Promise<void> {
       <div class="field">
         <label>起止时间</label>
         <div class="time-row">
-          <input
-            ref="startInput"
-            v-model="start"
-            class="input time-input num"
-            type="time"
-            step="60"
-            aria-label="开始时间"
-            @blur="onTimeBlur('start')"
-          />
-          <ArrowRight :size="16" class="time-arrow" />
-          <input
-            v-model="end"
-            class="input time-input num"
-            type="time"
-            step="60"
-            aria-label="结束时间"
-            @blur="onTimeBlur('end')"
-          />
           <button
-            v-if="kind === 'routine'"
+            class="time-btn num"
+            :class="{ empty: !start }"
+            aria-label="开始时间"
+            @click="openPicker('start')"
+          >
+            <Clock3 :size="14" />
+            {{ start || '选择时间' }}
+          </button>
+          <ArrowRight :size="16" class="time-arrow" />
+          <button
+            class="time-btn num"
+            :class="{ empty: !end }"
+            aria-label="结束时间"
+            @click="openPicker('end')"
+          >
+            <Clock3 :size="14" />
+            {{ end || (kind === 'routine' ? '不固定' : '选择时间') }}
+          </button>
+          <button
+            v-if="kind === 'routine' && (start || end)"
             class="time-clear"
             title="清空时间"
             @click="clearTime"
@@ -260,7 +257,7 @@ async function remove(): Promise<void> {
           </button>
         </div>
         <p class="hint">
-          点时间框会打开系统时间选择器；倒计时时长由起止时间自动计算。
+          点时间打开选择器；倒计时时长由起止时间自动计算。
         </p>
       </div>
 
@@ -284,6 +281,15 @@ async function remove(): Promise<void> {
       <button class="btn primary" :disabled="!canSave" @click="save">保存</button>
     </template>
   </AppModal>
+
+  <TimePicker
+    :open="pickerFor !== null"
+    :model-value="pickerFor === 'start' ? start : end"
+    :title="pickerFor === 'start' ? '设置开始时间' : '设置结束时间'"
+    :hint="pickerFor === 'end' ? '结束时间减去开始时间，就是这一段的倒计时时长' : '改开始时间会保持当前时长，结束时间一起平移'"
+    @confirm="applyPicked"
+    @close="pickerFor = null"
+  />
 </template>
 
 <style scoped>
@@ -329,15 +335,41 @@ async function remove(): Promise<void> {
   align-items: center;
   gap: 8px;
 }
-.time-input {
+.time-btn {
   flex: 1;
   min-width: 0;
-  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
   font-family: var(--font-mono);
   font-size: 17px;
   font-weight: 650;
   letter-spacing: 0.02em;
-  height: 48px;
+  transition: all 0.15s ease;
+}
+.time-btn svg {
+  color: var(--faint);
+  flex: none;
+}
+.time-btn:hover {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+}
+.time-btn:hover svg {
+  color: var(--primary-strong);
+}
+.time-btn.empty {
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--faint);
 }
 .time-arrow {
   color: var(--faint);
@@ -431,7 +463,7 @@ html[data-theme="dark"] .dur-pill {
     align-items: baseline;
     gap: 8px;
   }
-  .time-input {
+  .time-btn {
     font-size: 16px;
   }
 }

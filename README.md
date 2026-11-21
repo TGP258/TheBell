@@ -1,6 +1,6 @@
 # TheBell
 
-一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.2**。
+一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.3**。
 
 适用于考研、自学考试、语言考试、职业资格考试，以及任何需要长时间专注的场景。
 
@@ -13,16 +13,18 @@
 
 - **50/10 节奏模板**：默认只保留早 / 午 / 晚起居节点，其余时间切成 50 分钟学习 + 10 分钟休息；时间段类型、起止时间、内容、顺序均可编辑
 - **时间线节奏**：今日节奏按开始时间排成一条纵向时间线，左侧时间、右侧内容，一眼看清一天的走向
-- **单卡倒计时**：学习任务上方只有一张倒计时卡，用左右箭头切换要进行的时段（也可直接点时间线），支持开始 / 暂停 / 重置 / 本段完成
+- **单卡倒计时**：左栏顶部（与学习任务同宽）只有一张倒计时卡，与右侧时间线并排；左右箭头切换时段（也可直接点时间线），支持开始 / 暂停 / 重置 / 本段完成
+- **首页布局自定义**：卡片可显示/隐藏、整行/左栏/右栏、栏内上下排序；可选首页展示哪些独立计时器与倒数日
+- **倒数日主卡背景**：紫罗兰 / 日落 / 深海 / 森林 / 午夜 / 樱花六套渐变，可指定主卡展示哪个倒数日
 - **时长随时间走**：倒计时时长由起止时间自动推导，改成 10:00–10:30 就是 30 分钟，不会停留在旧的 50 分钟
-- **原生时间选择器**：点时间框唤起系统时间选择器，同时兼容手输（只进数字，自动补冒号）
+- **自绘时间选择器**：时 / 分双滚轮，带大号预览与「使用当前时间」，比系统弹窗更贴合应用视觉
 - **独立计时页**：可创建任意数量的自定义计时器，各自设置时长与颜色，可同时运行、互不冲突
 - **计划天数自定义**：默认 100 天，范围 1–1000 天；开始日期可改，日期自动顺延
 - **每日任务**：数学 / 专业课 / 外语 / 公共课 / 其他五个科目；逐条勾选划线、编辑、删除；按天独立
 - **倒数日**：主倒数 + 多个目标日，支持颜色与置顶
 - **JSON 导入 / 导出**：包含计划、任务、作息起止时间、打卡状态、分段计时、独立计时器、倒数日、主题
 - **主题**：浅色 / 深色 / 跟随系统
-- **版本**：`versionName = Dev0.2`，包名 `pascal.thebell`
+- **版本**：`versionName = Dev0.3`，包名 `pascal.thebell`
 
 ## 技术栈
 
@@ -78,7 +80,7 @@ open ios/App/App.xcworkspace
 ```
 src/
   views/            今日 / 计划 / 计时 / 倒数日 / 设置
-  components/       倒计时卡、时间线行、计时器弹窗、任务行、进度环、各类编辑对话框
+  components/       首页卡片组件（Hero/统计/倒计时/任务/节奏/计时器/倒数日）、时间滚轮选择器、各类编辑对话框
   stores/plan.ts    Pinia 状态：计划、作息、双计时系统与全部业务动作
   lib/
     storage/        StorageDriver：native(SQLite) / web(localStorage)
@@ -105,7 +107,7 @@ scripts/generate_assets.py  图标 / 启动图生成
 | `segment_timer(day_idx, routine_id, remaining_sec, ends_at)` | 学习 / 休息段的按天倒计时状态 |
 | `custom_timer(id, title, duration_sec, remaining_sec, ends_at, color, created_at)` | 独立计时器 |
 | `countdown(id, title, target_date, color, pinned)` | 倒数日 |
-| `meta(key, value)` | 主题等键值设置 |
+| `meta(key, value)` | 主题与首页布局（`home_layout` JSON） |
 
 `duration_sec` 由起止时间推导（`(end_min - start_min) × 60`），因此改时间就是改倒计时；旧库只有 `time_text` 时，首次启动会解析成 `start_min / end_min` 并回写。
 
@@ -117,7 +119,7 @@ scripts/generate_assets.py  图标 / 启动图生成
 {
   "app": "pascal.thebell",
   "format": "thebell/v1",
-  "version": "Dev0.2",
+  "version": "Dev0.3",
   "plan": { "name": "我的学习计划", "startDate": "2026-11-21", "totalDays": 100 },
   "routine": [
     { "time": "08:00–08:50", "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 },
@@ -136,11 +138,31 @@ scripts/generate_assets.py  图标 / 启动图生成
     { "dayIdx": 1, "routineIndex": 1, "remainingSec": 2400 }
   ],
   "countdowns": [{ "title": "目标日", "targetDate": "2027-01-01", "color": "violet", "pinned": true }],
+  "home": {
+    "cards": [
+      { "id": "hero", "visible": true, "zone": "full" },
+      { "id": "segment", "visible": true, "zone": "left" },
+      { "id": "rhythm", "visible": true, "zone": "right" }
+    ],
+    "heroCountdownIndex": 0,
+    "heroTheme": "sunset",
+    "timerIndexes": [0],
+    "countdownIndexes": [0]
+  },
   "settings": { "theme": "system" }
 }
 ```
 
 导入时会重新校验日期、科目、作息类型与时长、计时索引，并重建 ID；导出的计时器统一转为暂停状态，避免跨设备恢复时出现负数。
+
+## Dev0.3 变更
+
+- 自绘时间选择器：时 / 分双滚轮 + 大号预览 + 「使用当前时间」，替换系统时间弹窗
+- 首页卡片拆成独立组件，支持显示/隐藏、整行/左栏/右栏、栏内上下排序
+- 默认布局：左栏「分段倒计时 + 学习任务」，右栏「今日节奏」，倒计时卡与任务卡等宽
+- 倒数日主卡支持 6 套渐变背景，并可选展示哪个倒数日
+- 新增「独立计时器」「倒数日清单」两张可选卡片，自由勾选要展示的条目
+- 首页布局存于 SQLite `meta.home_layout`，并写入 JSON 备份（按索引保存选择）
 
 ## Dev0.2 变更
 
@@ -151,7 +173,7 @@ scripts/generate_assets.py  图标 / 启动图生成
 - 新增 10 / 25 / 30 / 50 分钟快捷时长，一键把结束时间设为开始 + N 分钟
 - SQLite 新增 `routine.start_min / end_min`，旧数据自动解析迁移；JSON 备份新增 `start` / `end`
 
-## Dev0.2 已知边界
+## Dev0.3 已知边界
 
 - 单计划模型（不做多计划切换 / 账号同步 / 云备份）
 - 暂无通知提醒、桌面小组件、后台常驻计时（切后台后按时间戳继续，但不会发系统通知）

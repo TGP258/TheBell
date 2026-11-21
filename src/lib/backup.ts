@@ -14,6 +14,7 @@ import type {
 } from '../types';
 import { isCategory, isCountdownColor } from './categories';
 import { addDays, endDate, isDateStr, todayStr } from './date';
+import { normalizeHome } from './home';
 import { newId } from './id';
 import { clockText, parseClock, parseRange } from './segment';
 import { DEFAULT_ROUTINE, makeRoutine, type RoutineInput } from './seed';
@@ -60,11 +61,13 @@ function remainingNow(remainingSec: number, endsAt: number | null): number {
 export function buildBackup(data: AppData): BackupFile {
   const routine = [...data.routine].sort((a, b) => a.sort - b.sort || a.id - b.id);
   const routineIndex = new Map(routine.map((item, index) => [item.id, index]));
+  const countdownIndex = new Map(data.countdowns.map((item, index) => [item.id, index]));
+  const timerIndex = new Map(data.customTimers.map((item, index) => [item.id, index]));
 
   return {
     app: 'pascal.thebell',
     format: 'thebell/v1',
-    version: 'Dev0.2',
+    version: 'Dev0.3',
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
     routine: routine.map((item) => ({
@@ -114,6 +117,20 @@ export function buildBackup(data: AppData): BackupFile {
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null),
+    home: {
+      cards: data.home.cards.map((card) => ({ ...card })),
+      heroCountdownIndex:
+        data.home.heroCountdownId != null
+          ? countdownIndex.get(data.home.heroCountdownId) ?? null
+          : null,
+      heroTheme: data.home.heroTheme,
+      timerIndexes: data.home.timerIds
+        .map((id) => timerIndex.get(id))
+        .filter((index): index is number => index !== undefined),
+      countdownIndexes: data.home.countdownIds
+        .map((id) => countdownIndex.get(id))
+        .filter((index): index is number => index !== undefined),
+    },
     settings: { theme: data.theme },
   };
 }
@@ -312,6 +329,24 @@ export function normalizeBackup(raw: unknown): {
       ? themeRaw
       : 'system';
 
+  const homeRaw = asRecord(root.home);
+  const heroIndex = homeRaw ? integer(homeRaw.heroCountdownIndex, -1) : -1;
+  const timerIndexes =
+    homeRaw && Array.isArray(homeRaw.timerIndexes) ? homeRaw.timerIndexes : [];
+  const countdownIndexes =
+    homeRaw && Array.isArray(homeRaw.countdownIndexes) ? homeRaw.countdownIndexes : [];
+  const home = normalizeHome({
+    cards: homeRaw?.cards,
+    heroTheme: homeRaw?.heroTheme,
+    heroCountdownId: heroIndex >= 0 ? countdowns[heroIndex]?.id ?? null : null,
+    timerIds: timerIndexes
+      .map((value) => customTimers[integer(value, -1)]?.id)
+      .filter((id): id is number => typeof id === 'number'),
+    countdownIds: countdownIndexes
+      .map((value) => countdowns[integer(value, -1)]?.id)
+      .filter((id): id is number => typeof id === 'number'),
+  });
+
   const data: AppData = {
     plan: { name, startDate, totalDays },
     days,
@@ -320,6 +355,7 @@ export function normalizeBackup(raw: unknown): {
     segmentTimers,
     customTimers,
     countdowns,
+    home,
     theme,
   };
 

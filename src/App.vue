@@ -99,7 +99,7 @@ onMounted(async () => {
         <div class="brand-mark"><Check :size="19" :stroke-width="3" /></div>
         <div class="brand-text">
           <b>TheBell</b>
-          <span>学习时钟 · Dev0.2</span>
+          <span>学习时钟 · Dev0.3</span>
         </div>
       </div>
 

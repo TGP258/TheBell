@@ -7,6 +7,39 @@ export type CountdownColor = 'violet' | 'amber' | 'cyan' | 'pink' | 'green';
 /** routine = 起居作息，不计时；study = 学习段；break = 休息段 */
 export type RoutineKind = 'routine' | 'study' | 'break';
 
+/** 首页卡片 */
+export type HomeCardId =
+  | 'hero'
+  | 'stats'
+  | 'segment'
+  | 'tasks'
+  | 'rhythm'
+  | 'timers'
+  | 'countdowns';
+
+/** 卡片占位：整行 / 左栏 / 右栏 */
+export type HomeZone = 'full' | 'left' | 'right';
+
+export type HeroTheme = 'violet' | 'sunset' | 'ocean' | 'forest' | 'midnight' | 'sakura';
+
+export interface HomeCardPref {
+  id: HomeCardId;
+  visible: boolean;
+  zone: HomeZone;
+}
+
+export interface HomeLayout {
+  /** 数组顺序即展示顺序 */
+  cards: HomeCardPref[];
+  /** 首页展示哪个倒数日，null = 跟随置顶 */
+  heroCountdownId: number | null;
+  heroTheme: HeroTheme;
+  /** 首页「独立计时器」卡片里展示哪些计时器 */
+  timerIds: number[];
+  /** 首页「倒数日清单」卡片里展示哪些倒数日 */
+  countdownIds: number[];
+}
+
 export interface Task {
   id: number;
   dayIdx: number;
@@ -79,6 +112,7 @@ export interface AppData {
   segmentTimers: Record<string, TimerState>;
   customTimers: CustomTimer[];
   countdowns: Countdown[];
+  home: HomeLayout;
   theme: ThemeMode;
 }
 
@@ -126,6 +160,14 @@ export interface BackupSegmentTimer {
   remainingSec: number;
 }
 
+export interface BackupHome {
+  cards?: HomeCardPref[];
+  heroCountdownIndex?: number | null;
+  heroTheme?: HeroTheme;
+  timerIndexes?: number[];
+  countdownIndexes?: number[];
+}
+
 export interface BackupFile {
   app: string;
   format: string;
@@ -142,6 +184,7 @@ export interface BackupFile {
   }[];
   customTimers?: BackupCustomTimer[];
   segmentTimers?: BackupSegmentTimer[];
+  home?: BackupHome;
   settings?: { theme?: ThemeMode };
 }
 

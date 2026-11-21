@@ -1,4 +1,5 @@
 import type { AppData, ThemeMode } from '../../types';
+import { normalizeHome } from '../home';
 import { createSeed } from '../seed';
 import { durationFromRange, parseRange } from '../segment';
 import type { StorageDriver } from './driver';
@@ -15,6 +16,7 @@ function hydrate(raw: unknown): AppData | null {
   data.segmentTimers = data.segmentTimers ?? {};
   data.customTimers = data.customTimers ?? [];
   data.countdowns = data.countdowns ?? [];
+  data.home = normalizeHome(data.home);
   data.theme = data.theme ?? 'system';
   for (const item of data.routine) {
     item.kind = item.kind ?? 'routine';
@@ -125,6 +127,10 @@ export class WebDriver implements StorageDriver {
   }
 
   async setTheme(_theme: ThemeMode): Promise<void> {
+    this.persist();
+  }
+
+  async setHome(): Promise<void> {
     this.persist();
   }
 
