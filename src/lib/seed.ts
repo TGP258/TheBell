@@ -34,7 +34,7 @@ const DAY_PLAN: TemplateBlock[] = [
   { kind: 'study', minutes: 50 },
   { kind: 'break', minutes: 10 },
   { kind: 'study', minutes: 50 },
-  { kind: 'break', minutes: 20 },
+  { kind: 'break', minutes: 10 },
   { kind: 'routine', minutes: 30, title: '晚间复盘：整理笔记、错题、明日计划' },
   { kind: 'routine', minutes: 60, title: '睡前准备：洗漱、放松' },
 ];
