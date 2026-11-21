@@ -162,7 +162,8 @@ scripts/
 
 猫耳时钟：白色底、蓝色圆环、黄色轴心，分针指向 5 点后延伸成猫尾巴，圆环顶部两只带弧度的猫耳。
 
-- 源文件：`resources/icon.svg`（1024，白色圆角底）、`icon-square.svg`、`icon-round.svg`、`logo.svg`（透明底）、`icon-monochrome.svg`（单色剪影）
+- 源文件：`resources/icon.svg`（1024，白色圆角底，按部件分组：ring / ear-left / ear-right / hand-hour / hand-minute / cat-tail / center-pin）、`icon-square.svg`、`icon-round.svg`、`logo.svg`（透明底）、`icon-monochrome.svg`（单色剪影）、`icon-bw.svg`（黑白墨稿）
+- 申报图样：`icon-1500.png`（彩色）、`icon-bw-1500.png`（黑白），打包件 `D:/TheBell-icon-source.zip`
 - 生成：`python scripts/logo.py` 输出 SVG 与 Android 矢量层；`node scripts/render_icons.mjs` 光栅化 `mipmap-*/ic_launcher*.png`、`resources/icon.png` 与 iOS `AppIcon`
 - 自适应图标：108dp 画布，纯白 `background` + 矢量 `foreground`，图形控制在中心 66dp 安全区内，耳朵 / 尾巴不会被任何遮罩裁掉
 - 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色

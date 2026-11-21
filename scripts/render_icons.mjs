@@ -29,6 +29,8 @@ for (const [density, size] of Object.entries({
   });
 }
 jobs.push({ svg: 'icon.svg', size: 1024, out: path.join(ROOT, 'resources/icon.png') });
+jobs.push({ svg: 'icon.svg', size: 1500, out: path.join(ROOT, 'resources/icon-1500.png') });
+jobs.push({ svg: 'icon-bw.svg', size: 1500, out: path.join(ROOT, 'resources/icon-bw-1500.png') });
 jobs.push({ svg: 'logo.svg', size: 1024, out: path.join(ROOT, 'resources/logo.png') });
 jobs.push({ svg: 'icon-square.svg', size: 1024, out: path.join(IOS, 'AppIcon-512@2x.png') });
 

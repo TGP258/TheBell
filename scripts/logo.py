@@ -177,61 +177,69 @@ def build_shapes(color_blue=BLUE, color_yellow=YELLOW, with_pin=True):
     minute_a, minute_b = hand(150, RING_R + 20)
     hour_a, hour_b = hand(300, 150)
     shapes = [
-        {"kind": "ring", "d": ring_path(), "w": RING_W, "color": color_blue},
-        {"kind": "ear", "d": ear_path(-1), "w": 20, "color": color_blue},
-        {"kind": "ear", "d": ear_path(1), "w": 20, "color": color_blue},
+        {"id": "ring", "kind": "ring", "d": ring_path(), "w": RING_W, "color": color_blue},
+        {"id": "ear-left", "kind": "ear", "d": ear_path(-1), "w": 20, "color": color_blue},
+        {"id": "ear-right", "kind": "ear", "d": ear_path(1), "w": 20, "color": color_blue},
         {
+            "id": "hand-hour",
             "kind": "hand",
             "d": f"M {n(hour_a)} L {n(hour_b)}",
             "w": 52,
             "color": color_blue,
         },
         {
+            "id": "hand-minute",
             "kind": "hand",
             "d": f"M {n(minute_a)} L {n(minute_b)}",
             "w": 46,
             "color": color_blue,
         },
-        {"kind": "tail", "d": tail_path(), "color": color_blue},
+        {"id": "cat-tail", "kind": "tail", "d": tail_path(), "color": color_blue},
     ]
     if with_pin:
-        shapes.append({"kind": "pin", "color": color_yellow})
+        shapes.append({"id": "center-pin", "kind": "pin", "color": color_yellow})
     return shapes
 
 
 def svg_from_shapes(shapes) -> str:
+    """输出带分组的 SVG：每个部件一个 <g id>，方便二次编辑。"""
     out = []
     for shape in shapes:
         kind = shape["kind"]
         color = shape["color"]
         if kind == "pin":
-            out.append(
-                f'<circle cx="{fmt(C[0])}" cy="{fmt(C[1])}" r="38" fill="{color}"/>'
-            )
+            body = f'<circle cx="{fmt(C[0])}" cy="{fmt(C[1])}" r="38" fill="{color}"/>'
         elif kind == "ring":
-            out.append(
+            body = (
                 f'<path d="{shape["d"]}" fill="none" stroke="{color}" '
                 f'stroke-width="{fmt(shape["w"])}"/>'
             )
         elif kind == "ear":
             if shape["w"] > 0:
-                out.append(
+                body = (
                     f'<path d="{shape["d"]}" fill="{color}" stroke="{color}" '
                     f'stroke-width="{fmt(shape["w"])}" stroke-linejoin="round"/>'
                 )
             else:
-                out.append(f'<path d="{shape["d"]}" fill="{color}"/>')
+                body = f'<path d="{shape["d"]}" fill="{color}"/>'
         elif kind == "hand":
-            out.append(
+            body = (
                 f'<path d="{shape["d"]}" fill="none" stroke="{color}" '
                 f'stroke-width="{fmt(shape["w"])}" stroke-linecap="round"/>'
             )
         else:
-            out.append(f'<path d="{shape["d"]}" fill="{color}"/>')
+            body = f'<path d="{shape["d"]}" fill="{color}"/>'
+        out.append(f'<g id="{shape["id"]}">\n    {body}\n  </g>')
     return "\n  ".join(out)
 
 
-def wrap(body: str, background: str, scale: float = 1.0) -> str:
+def wrap(
+    body: str,
+    background: str,
+    scale: float = 1.0,
+    title: str = "TheBell 应用图标",
+    desc: str = "猫耳时钟：蓝色圆环 + 黄色轴心，分针指向 5 点后延伸为猫尾，环顶两只带弧度的猫耳。",
+) -> str:
     if scale != 1.0:
         body = (
             f'<g transform="translate(512 512) scale({scale}) translate(-512 -512)">\n'
@@ -241,6 +249,8 @@ def wrap(body: str, background: str, scale: float = 1.0) -> str:
     return (
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" '
         'width="1024" height="1024">\n'
+        f"  <title>{title}</title>\n"
+        f"  <desc>{desc}</desc>\n"
         f"  {background}\n"
         f"  {body}\n"
         "</svg>\n"
@@ -406,6 +416,18 @@ def main() -> None:
         encoding="utf-8",
     )
     (RES / "icon-monochrome.svg").write_text(wrap(mono, ""), encoding="utf-8")
+
+    bw = svg_from_shapes(build_shapes("#000000", "#000000"))
+    (RES / "icon-bw.svg").write_text(
+        wrap(
+            bw,
+            '<rect width="1024" height="1024" fill="#FFFFFF"/>',
+            1.12,
+            title="TheBell 图标（黑白墨稿）",
+            desc="商标 / 软著申报用黑白稿：纯黑图形 + 纯白底。",
+        ),
+        encoding="utf-8",
+    )
 
     # 同步给 Web 端：favicon 与品牌角标
     public = ROOT / "public"
