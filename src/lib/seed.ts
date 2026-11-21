@@ -1,6 +1,7 @@
 import type { AppData, Day, RoutineItem, RoutineKind } from '../types';
 import { buildDates, todayStr } from './date';
 import { newId } from './id';
+import { durationFromRange, parseRange, rangeText, normalizeRange } from './segment';
 
 interface TemplateBlock {
   kind: RoutineKind;
@@ -8,10 +9,20 @@ interface TemplateBlock {
   title?: string;
 }
 
+export interface RoutineInput {
+  title: string;
+  kind?: RoutineKind;
+  startMin?: number;
+  endMin?: number;
+  /** 兼容旧数据的整段文本，如 "08:00–08:50" */
+  time?: string;
+  durationSec?: number;
+}
+
 /**
  * 默认的一天：只保留早 / 午 / 晚起居节点，
  * 其余学习时间统一切成 50 分钟学习 + 10 分钟休息。
- * 起始 07:30，结束 21:30，之后 23:00 前睡觉。
+ * 起始 07:30，结束 21:30，之后 23:00 睡觉。
  */
 const DAY_PLAN: TemplateBlock[] = [
   { kind: 'routine', minutes: 30, title: '早间作息：起床、洗漱、早餐' },
@@ -39,27 +50,10 @@ const DAY_PLAN: TemplateBlock[] = [
   { kind: 'routine', minutes: 60, title: '睡前准备：洗漱、放松' },
 ];
 
-function hhmm(totalMinutes: number): string {
-  const dayMinutes = ((totalMinutes % 1440) + 1440) % 1440;
-  const h = Math.floor(dayMinutes / 60);
-  const m = dayMinutes % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-function buildDefaultRoutine(): {
-  time: string;
-  title: string;
-  kind: RoutineKind;
-  durationSec: number;
-}[] {
+function buildDefaultRoutine(): RoutineInput[] {
   let cursor = 7 * 60 + 30;
   let studyIndex = 0;
-  const items: {
-    time: string;
-    title: string;
-    kind: RoutineKind;
-    durationSec: number;
-  }[] = [];
+  const items: RoutineInput[] = [];
 
   for (const block of DAY_PLAN) {
     const start = cursor;
@@ -72,7 +66,9 @@ function buildDefaultRoutine(): {
           ? `休息 ${block.minutes} 分钟`
           : block.title ?? '作息';
     items.push({
-      time: `${hhmm(start)}–${hhmm(cursor)}`,
+      time: rangeText(start, cursor),
+      startMin: start,
+      endMin: cursor,
       title,
       kind: block.kind,
       durationSec: block.kind === 'routine' ? 0 : block.minutes * 60,
@@ -80,7 +76,9 @@ function buildDefaultRoutine(): {
   }
 
   items.push({
-    time: '23:00 前',
+    time: '23:00',
+    startMin: 23 * 60,
+    endMin: -1,
     title: '睡觉（保证 7 小时以上）',
     kind: 'routine',
     durationSec: 0,
@@ -88,7 +86,7 @@ function buildDefaultRoutine(): {
   return items;
 }
 
-export const DEFAULT_ROUTINE = buildDefaultRoutine();
+export const DEFAULT_ROUTINE: RoutineInput[] = buildDefaultRoutine();
 
 export function emptyData(): AppData {
   return {
@@ -103,17 +101,44 @@ export function emptyData(): AppData {
   };
 }
 
-export function makeRoutine(
-  items: { time: string; title: string; kind?: RoutineKind; durationSec?: number }[]
-): RoutineItem[] {
-  return items.map((item, index) => ({
-    id: newId(),
-    time: item.time,
-    title: item.title,
-    sort: index,
-    kind: item.kind ?? 'routine',
-    durationSec: Math.max(0, Math.round(item.durationSec ?? 0)),
-  }));
+/**
+ * 统一构造作息条目：
+ * - 有起止时间时，学习/休息段的倒计时时长一律由区间推导，避免「改了时间但倒计时不变」
+ * - 旧数据只有 time 文本时先解析区间
+ * - 都缺失时给该类型一个默认时长
+ */
+export function makeRoutine(items: RoutineInput[]): RoutineItem[] {
+  return items.map((item, index) => {
+    const kind = item.kind ?? 'routine';
+    let startMin = typeof item.startMin === 'number' ? item.startMin : -1;
+    let endMin = typeof item.endMin === 'number' ? item.endMin : -1;
+
+    if (startMin < 0 && item.time) {
+      const parsed = parseRange(item.time);
+      startMin = parsed.startMin;
+      endMin = parsed.endMin;
+    }
+
+    const range = normalizeRange(startMin, endMin);
+    const derived = durationFromRange(range.startMin, range.endMin, kind);
+    const fallback = kind === 'break' ? 600 : 3000;
+    let durationSec = 0;
+    if (kind !== 'routine') {
+      const given = Math.round(item.durationSec ?? 0);
+      durationSec = derived || (given > 0 ? Math.min(86400, given) : fallback);
+    }
+
+    return {
+      id: newId(),
+      time: rangeText(range.startMin, range.endMin) || item.time?.trim() || '弹性',
+      startMin: range.startMin,
+      endMin: range.endMin,
+      title: item.title,
+      sort: index,
+      kind,
+      durationSec,
+    };
+  });
 }
 
 export function createSeed(): AppData {

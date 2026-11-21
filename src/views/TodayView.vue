@@ -1,18 +1,13 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
 import {
-  ArrowDown,
-  ArrowUp,
   Check,
   CheckCircle2,
   Clock3,
   Flame,
   Moon,
-  Pause,
   Pencil,
-  Play,
   Plus,
-  RotateCcw,
   SlidersHorizontal,
   Sun,
   Target,
@@ -21,9 +16,11 @@ import {
 import type { Category, RoutineItem } from '../types';
 import { CATEGORY_LIST, CATEGORY_META } from '../lib/categories';
 import { fullDateCN, relativeLabel, weekdayCN } from '../lib/date';
+import { clockText, coversNow, durationText, fmtCountdown, nowMinutes } from '../lib/segment';
 import { usePlanStore } from '../stores/plan';
 import { toast } from '../lib/toast';
 import ProgressRing from '../components/ProgressRing.vue';
+import SegmentTimerCard from '../components/SegmentTimerCard.vue';
 import TaskRow from '../components/TaskRow.vue';
 import TaskDialog from '../components/TaskDialog.vue';
 import RoutineDialog from '../components/RoutineDialog.vue';
@@ -129,13 +126,27 @@ function kindName(kind: RoutineItem['kind']): string {
   return '作息';
 }
 
-function fmtSec(total: number): string {
-  const value = Math.max(0, Math.round(total));
-  const h = Math.floor(value / 3600);
-  const m = Math.floor((value % 3600) / 60);
-  const s = value % 60;
-  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
-  return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+const nowMin = computed(() => nowMinutes(store.nowMs));
+
+function startLabel(item: RoutineItem): string {
+  return item.startMin >= 0 ? clockText(item.startMin) : '—';
+}
+
+function endLabel(item: RoutineItem): string {
+  return item.endMin > 0 ? clockText(item.endMin) : '';
+}
+
+function segDuration(item: RoutineItem): string {
+  return item.kind === 'routine' ? '' : durationText(item.durationSec);
+}
+
+function isNowSegment(item: RoutineItem): boolean {
+  return coversNow(item, nowMin.value);
+}
+
+function selectSegment(item: RoutineItem): void {
+  if (item.kind === 'routine' || item.durationSec <= 0) return;
+  store.selectSegment(item.id);
 }
 
 async function removeRoutine(item: RoutineItem): Promise<void> {
@@ -260,6 +271,8 @@ const editingTask = computed(() =>
     </section>
 
     <div class="today-grid">
+      <SegmentTimerCard class="timer-slot" />
+
       <section class="card tasks-card">
         <div class="section-head">
           <h3>学习任务 <span class="cnt num">{{ progress.done }}/{{ progress.total }}</span></h3>
@@ -346,93 +359,73 @@ const editingTask = computed(() =>
         </div>
 
         <div v-if="day" class="routine-body">
-          <div v-if="store.routine.length" class="seg-grid">
-            <div
-              v-for="(item, index) in store.routine"
+          <div v-if="store.timeline.length" class="timeline">
+            <article
+              v-for="item in store.timeline"
               :key="item.id"
-              class="seg-card"
+              class="tl-item"
               :class="[
                 item.kind,
                 {
-                  full: item.kind === 'routine',
+                  active: store.activeSegment?.id === item.id,
                   done: store.isRoutineDone(day.idx, item.id),
                   running: store.segmentRunning(day.idx, item.id),
+                  now: !manageRoutine && isNowSegment(item),
                   managing: manageRoutine,
                 },
               ]"
             >
-              <div class="seg-head">
-                <span class="seg-kind">{{ kindName(item.kind) }}</span>
-                <span class="seg-time num">{{ item.time }}</span>
-                <button
-                  v-if="!manageRoutine"
-                  class="seg-check"
-                  :class="{ on: store.isRoutineDone(day.idx, item.id) }"
-                  :aria-label="store.isRoutineDone(day.idx, item.id) ? '取消打卡' : '打卡'"
-                  @click="store.toggleCheck(day.idx, item.id)"
-                >
-                  <Check :size="12" :stroke-width="3.2" />
-                </button>
+              <div class="tl-time num">
+                <b>{{ startLabel(item) }}</b>
+                <span v-if="endLabel(item)">{{ endLabel(item) }}</span>
               </div>
 
-              <div class="seg-title">{{ item.title }}</div>
+              <div class="tl-rail"><span class="tl-dot" /></div>
 
-              <template v-if="item.kind !== 'routine'">
-                <div class="seg-timer">
+              <div
+                class="tl-card"
+                :class="{ inert: item.kind === 'routine' && !manageRoutine }"
+                @click="manageRoutine ? openRoutineDialog(item) : selectSegment(item)"
+              >
+                <div class="tl-top">
+                  <span class="tl-kind">{{ kindName(item.kind) }}</span>
+                  <span v-if="item.kind !== 'routine'" class="tl-dur num">
+                    {{ segDuration(item) }}
+                  </span>
+                  <span v-if="!manageRoutine && isNowSegment(item)" class="tl-now">现在</span>
                   <span
                     v-if="store.segmentRunning(day.idx, item.id)"
-                    class="seg-live"
-                    aria-hidden="true"
-                  />
-                  <span class="seg-clock num">
-                    {{ fmtSec(store.segmentRemaining(day.idx, item.id)) }}
+                    class="tl-live num"
+                    title="该段正在计时"
+                  >
+                    {{ fmtCountdown(store.segmentRemaining(day.idx, item.id)) }}
                   </span>
-                  <div class="seg-actions">
-                    <button
-                      class="seg-play"
-                      :class="{ on: store.segmentRunning(day.idx, item.id) }"
-                      :title="store.segmentRunning(day.idx, item.id) ? '暂停' : '开始'"
-                      @click="store.toggleSegment(day.idx, item.id)"
-                    >
-                      <Pause v-if="store.segmentRunning(day.idx, item.id)" :size="13" />
-                      <Play v-else :size="13" />
-                    </button>
-                    <button
-                      class="seg-reset"
-                      title="重置"
-                      @click="store.resetSegment(day.idx, item.id)"
-                    >
-                      <RotateCcw :size="13" />
-                    </button>
-                  </div>
+                  <button
+                    v-if="!manageRoutine"
+                    class="tl-check"
+                    :class="{ on: store.isRoutineDone(day.idx, item.id) }"
+                    :aria-label="store.isRoutineDone(day.idx, item.id) ? '取消打卡' : '打卡'"
+                    @click.stop="store.toggleCheck(day.idx, item.id)"
+                  >
+                    <Check :size="12" :stroke-width="3.2" />
+                  </button>
                 </div>
-                <div class="seg-bar">
-                  <i :style="{ width: store.segmentProgress(day.idx, item.id) + '%' }" />
-                </div>
-              </template>
 
-              <div v-if="manageRoutine" class="seg-manage">
-                <button :disabled="index === 0" title="上移" @click="store.moveRoutine(item.id, -1)">
-                  <ArrowUp :size="13" />
-                </button>
-                <button
-                  :disabled="index === store.routine.length - 1"
-                  title="下移"
-                  @click="store.moveRoutine(item.id, 1)"
-                >
-                  <ArrowDown :size="13" />
-                </button>
-                <button title="编辑" @click="openRoutineDialog(item)">
-                  <Pencil :size="13" />
-                </button>
-                <button class="danger" title="删除" @click="removeRoutine(item)">
-                  <Trash2 :size="13" />
-                </button>
+                <p class="tl-title">{{ item.title }}</p>
+
+                <div v-if="manageRoutine" class="tl-actions">
+                  <button title="编辑" @click.stop="openRoutineDialog(item)">
+                    <Pencil :size="13" />
+                  </button>
+                  <button class="danger" title="删除" @click.stop="removeRoutine(item)">
+                    <Trash2 :size="13" />
+                  </button>
+                </div>
               </div>
-            </div>
+            </article>
           </div>
 
-          <div v-if="!store.routine.length" class="empty">
+          <div v-if="!store.timeline.length" class="empty">
             <span class="empty-icon"><Clock3 :size="24" /></span>
             <b>还没有时间段</b>
             <p>添加学习段与休息段，按自己的节奏安排一天。</p>
@@ -442,7 +435,7 @@ const editingTask = computed(() =>
             <Plus :size="16" /> 添加时间段
           </button>
           <p class="rt-note">
-            学习与休息段可独立倒计时、暂停、重置；起居作息只打卡不计时。所有状态按天保存。
+            时间线按开始时间排列。点某一段可在上方倒计时卡里切换；学习与休息段可计时，起居作息只打卡。
           </p>
         </div>
       </section>
@@ -657,6 +650,9 @@ const editingTask = computed(() =>
   .today-grid {
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 0.9fr);
   }
+  .timer-slot {
+    grid-column: 1 / -1;
+  }
 }
 
 .tasks-card,
@@ -762,57 +758,144 @@ const editingTask = computed(() =>
   background: var(--primary-soft);
 }
 
-/* ---------- Routine segments ---------- */
+/* ---------- Timeline ---------- */
+.timer-slot {
+  min-width: 0;
+}
 .routine-body {
   padding: 0 16px 16px;
 }
-.seg-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+.timeline {
+  padding: 2px 0;
 }
-.seg-card {
-  position: relative;
+.tl-item {
+  --accent: var(--border-strong);
+  --accent-soft: var(--surface-3);
+  display: grid;
+  grid-template-columns: 56px 22px minmax(0, 1fr);
+  gap: 6px;
+  padding-bottom: 8px;
+}
+.tl-item.study {
+  --accent: var(--primary);
+  --accent-soft: var(--primary-soft);
+}
+.tl-item.break {
+  --accent: var(--success);
+  --accent-soft: var(--success-soft);
+}
+.tl-time {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 11px 8px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  border-left-width: 3px;
+  align-items: flex-end;
+  gap: 1px;
+  padding-top: 7px;
+  line-height: 1.3;
+  font-size: 10px;
+  color: var(--faint);
+}
+.tl-time b {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-2);
+  letter-spacing: -0.01em;
+}
+.tl-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.tl-rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: -8px;
+  left: 50%;
+  width: 1.5px;
+  margin-left: -0.75px;
+  background: var(--border);
+}
+.tl-item:last-child .tl-rail::before {
+  display: none;
+}
+.tl-dot {
+  position: relative;
+  z-index: 1;
+  width: 9px;
+  height: 9px;
+  margin-top: 11px;
+  border-radius: 99px;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--surface);
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+.tl-item.routine .tl-dot {
+  width: 7px;
+  height: 7px;
+  margin-top: 12px;
+  background: var(--border-strong);
+}
+.tl-item.routine.study .tl-dot,
+.tl-item.routine.break .tl-dot {
+  background: var(--accent);
+}
+.tl-card {
+  min-width: 0;
+  padding: 7px 10px 8px;
+  border-radius: 12px;
+  border: 1px solid transparent;
   background: var(--surface-2);
-  overflow: hidden;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-.seg-card.study {
-  border-left-color: var(--primary);
+.tl-card:hover {
+  background: var(--surface-3);
 }
-.seg-card.break {
-  border-left-color: var(--success);
+.tl-item.routine .tl-card {
+  background: transparent;
+  padding-top: 5px;
+  padding-bottom: 6px;
 }
-.seg-card.routine {
-  border-left-color: var(--border-strong);
-  background: var(--surface);
+.tl-item.routine .tl-card:hover {
+  background: var(--surface-2);
 }
-.seg-card.full {
-  grid-column: 1 / -1;
+.tl-card.inert {
+  cursor: default;
 }
-.seg-card.running {
-  border-color: var(--primary);
-  background: var(--primary-soft-2);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 22%, transparent);
+.tl-card.inert:hover {
+  background: transparent;
 }
-.seg-card.done .seg-title {
+.tl-item.active .tl-card {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+.tl-item.active .tl-dot {
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+.tl-item.running .tl-dot {
+  animation: tl-pulse 1.5s ease-in-out infinite;
+}
+@keyframes tl-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px var(--accent-soft);
+  }
+  50% {
+    box-shadow: 0 0 0 7px transparent;
+  }
+}
+.tl-item.done .tl-title {
   color: var(--faint);
   text-decoration: line-through;
 }
-.seg-head {
+.tl-top {
   display: flex;
   align-items: center;
   gap: 6px;
-  min-height: 18px;
+  min-height: 19px;
 }
-.seg-kind {
+.tl-kind {
+  flex: none;
   font-size: 9.5px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -820,32 +903,44 @@ const editingTask = computed(() =>
   border-radius: 99px;
   background: var(--surface-3);
   color: var(--muted);
-  flex: none;
 }
-.seg-card.study .seg-kind {
+.tl-item.study .tl-kind {
   color: var(--primary-strong);
   background: var(--primary-soft);
 }
-.seg-card.break .seg-kind {
+.tl-item.break .tl-kind {
   color: #0a7a47;
   background: var(--success-soft);
 }
-html[data-theme="dark"] .seg-card.break .seg-kind {
+html[data-theme="dark"] .tl-item.break .tl-kind {
   color: var(--success);
 }
-.seg-time {
-  font-size: 9.5px;
-  font-family: var(--font-mono);
-  color: var(--muted);
-  margin-left: auto;
+.tl-dur {
+  font-size: 10px;
+  color: var(--faint);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
-.seg-check {
+.tl-now {
   flex: none;
-  width: 21px;
-  height: 21px;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 99px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.tl-live {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary-strong);
+  font-variant-numeric: tabular-nums;
+}
+.tl-check {
+  flex: none;
+  margin-left: auto;
+  width: 20px;
+  height: 20px;
   border-radius: 7px;
   border: 1.5px solid var(--border-strong);
   display: grid;
@@ -854,115 +949,37 @@ html[data-theme="dark"] .seg-card.break .seg-kind {
   background: transparent;
   transition: all 0.16s ease;
 }
-.seg-check :deep(svg) {
+.tl-live + .tl-check {
+  margin-left: 4px;
+}
+.tl-check :deep(svg) {
   opacity: 0;
   transform: scale(0.6);
   transition: all 0.15s ease;
 }
-.seg-check.on {
+.tl-check.on {
   background: var(--success);
   border-color: var(--success);
 }
-.seg-check.on :deep(svg) {
+.tl-check.on :deep(svg) {
   opacity: 1;
   transform: scale(1);
 }
-.seg-title {
+.tl-title {
+  margin-top: 2px;
   font-size: 12.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text-2);
   word-break: break-word;
 }
-.seg-timer {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 2px;
-}
-.seg-live {
-  width: 5px;
-  height: 5px;
-  border-radius: 99px;
-  background: var(--primary);
-  box-shadow: 0 0 0 3px var(--primary-soft);
-  flex: none;
-  animation: seg-pulse 1.4s ease-in-out infinite;
-}
-@keyframes seg-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-.seg-clock {
-  font-family: var(--font-mono);
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-.seg-card.running .seg-clock {
-  color: var(--primary-strong);
-}
-.seg-actions {
+.tl-actions {
   display: flex;
   gap: 4px;
-  margin-left: auto;
-}
-.seg-play,
-.seg-reset {
-  width: 25px;
-  height: 25px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-2);
-}
-.seg-play {
-  background: var(--primary-soft);
-  border-color: transparent;
-  color: var(--primary-strong);
-}
-.seg-play.on {
-  background: var(--primary);
-  color: #fff;
-}
-.seg-play:hover,
-.seg-reset:hover {
-  filter: brightness(0.97);
-}
-.seg-bar {
-  height: 3px;
-  border-radius: 99px;
-  background: var(--surface-3);
-  overflow: hidden;
-  margin-top: 3px;
-}
-.seg-bar i {
-  display: block;
-  height: 100%;
-  border-radius: 99px;
-  background: linear-gradient(90deg, var(--primary), #a855f7);
-  transition: width 0.8s linear;
-}
-.seg-card.break .seg-bar i {
-  background: linear-gradient(90deg, var(--success), #34d399);
-}
-.seg-manage {
-  display: flex;
-  gap: 4px;
-  margin-top: 5px;
+  margin-top: 6px;
   padding-top: 6px;
   border-top: 1px dashed var(--border);
 }
-.seg-manage button {
+.tl-actions button {
   width: 25px;
   height: 25px;
   border-radius: 7px;
@@ -971,14 +988,14 @@ html[data-theme="dark"] .seg-card.break .seg-kind {
   color: var(--muted);
   background: var(--surface-3);
 }
-.seg-manage button:hover {
+.tl-actions button:hover {
   color: var(--text);
 }
-.seg-manage button.danger:hover {
+.tl-actions button.danger:hover {
   color: var(--danger);
   background: var(--danger-soft);
 }
-.seg-manage button:disabled {
+.tl-actions button:disabled {
   opacity: 0.35;
   pointer-events: none;
 }
@@ -1037,16 +1054,23 @@ html[data-theme="dark"] .seg-card.break .seg-kind {
   .stat span {
     font-size: 10.5px;
   }
-  .seg-clock {
-    font-size: 17px;
+  .tl-time {
+    font-size: 9.5px;
   }
-  .seg-kind {
-    font-size: 9px;
+  .tl-time b {
+    font-size: 11px;
+  }
+  .tl-title {
+    font-size: 12px;
   }
 }
 @container (max-width: 460px) {
-  .seg-grid {
-    grid-template-columns: 1fr;
+  .tl-item {
+    grid-template-columns: 46px 18px minmax(0, 1fr);
+    gap: 5px;
+  }
+  .tl-card {
+    padding: 6px 8px 7px;
   }
 }
 @container (max-width: 430px) {

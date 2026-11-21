@@ -26,10 +26,16 @@ export interface Day {
 
 export interface RoutineItem {
   id: number;
+  /** 展示用时间文本，由 startMin/endMin 生成 */
   time: string;
+  /** 开始时间（0..1439），-1 表示未设置 */
+  startMin: number;
+  /** 结束时间（可 > 1440 表示跨日），-1 表示未设置 */
+  endMin: number;
   title: string;
   sort: number;
   kind: RoutineKind;
+  /** 学习/休息段为倒计时秒数，由起止时间推导；起居作息恒为 0 */
   durationSec: number;
 }
 
@@ -97,7 +103,11 @@ export interface BackupDay {
 }
 
 export interface BackupRoutine {
-  time: string;
+  /** 兼容旧版：完整时间文本，如 "08:00–08:50" */
+  time?: string;
+  /** 新版：开始 / 结束时间，如 "08:00" / "08:50" */
+  start?: string;
+  end?: string;
   title: string;
   kind?: RoutineKind;
   durationSec?: number;

@@ -20,6 +20,7 @@ import { WebDriver } from '../lib/storage/web';
 import { createSeed, emptyData } from '../lib/seed';
 import { buildDates, diffDays, endDate, todayStr } from '../lib/date';
 import { newId } from '../lib/id';
+import { durationFromRange, coversNow, normalizeRange, nowMinutes, rangeText } from '../lib/segment';
 import { toast } from '../lib/toast';
 
 let driver: StorageDriver | null = null;
@@ -45,6 +46,54 @@ export const usePlanStore = defineStore('plan', () => {
     [...data.value.routine].sort((a, b) => a.sort - b.sort || a.id - b.id)
   );
   const routineCount = computed(() => routine.value.length);
+
+  /** 时间线顺序：按开始时间排，未设置时间的排在最后 */
+  const timeline = computed(() =>
+    [...routine.value].sort((a, b) => {
+      const aTimed = a.startMin >= 0 ? 0 : 1;
+      const bTimed = b.startMin >= 0 ? 0 : 1;
+      if (aTimed !== bTimed) return aTimed - bTimed;
+      if (a.startMin !== b.startMin) return a.startMin - b.startMin;
+      return a.sort - b.sort || a.id - b.id;
+    })
+  );
+
+  /** 可倒计时的分段（学习 / 休息），顺序与时间线一致 */
+  const timerSegments = computed(() =>
+    timeline.value.filter((item) => item.kind !== 'routine' && item.durationSec > 0)
+  );
+  const activeSegmentId = ref<number | null>(null);
+  const activeSegment = computed<RoutineItem | null>(() => {
+    const list = timerSegments.value;
+    if (!list.length) return null;
+    return list.find((item) => item.id === activeSegmentId.value) ?? list[0];
+  });
+  const activeSegmentIndex = computed(() => {
+    const item = activeSegment.value;
+    return item ? timerSegments.value.findIndex((seg) => seg.id === item.id) : -1;
+  });
+
+  function selectSegment(id: number): void {
+    activeSegmentId.value = id;
+  }
+
+  /** 左右切换要进行的时间段 */
+  function stepSegment(delta: number): void {
+    const list = timerSegments.value;
+    if (!list.length) return;
+    const base = activeSegmentIndex.value < 0 ? 0 : activeSegmentIndex.value;
+    const next = (base + delta + list.length) % list.length;
+    activeSegmentId.value = list[next].id;
+  }
+
+  /** 首次进入时，默认选中当前时间覆盖的那一段 */
+  function focusCurrentSegment(): void {
+    if (timerSegments.value.some((item) => item.id === activeSegmentId.value)) return;
+    const minutes = nowMinutes(Date.now());
+    const hit = timerSegments.value.find((item) => coversNow(item, minutes));
+    activeSegmentId.value = hit?.id ?? timerSegments.value[0]?.id ?? null;
+  }
+
   const customTimers = computed(() =>
     [...data.value.customTimers].sort((a, b) => a.createdAt - b.createdAt || a.id - b.id)
   );
@@ -210,6 +259,7 @@ export const usePlanStore = defineStore('plan', () => {
     ready.value = true;
     startClock();
     expireTimers();
+    focusCurrentSegment();
   }
 
   function startClock(): void {
@@ -342,24 +392,25 @@ export const usePlanStore = defineStore('plan', () => {
   }
 
   async function addRoutine(input: {
-    time: string;
+    startMin: number;
+    endMin: number;
     title: string;
     kind: RoutineKind;
-    durationSec: number;
   }): Promise<RoutineItem | null> {
     const text = input.title.trim();
     if (!text) return null;
     const kind = input.kind;
-    const durationSec =
-      kind === 'routine'
-        ? 0
-        : Math.min(86400, Math.max(60, Math.round(input.durationSec)));
+    const range = normalizeRange(input.startMin, input.endMin);
+    const derived = durationFromRange(range.startMin, range.endMin, kind);
+    const fallback = kind === 'break' ? 600 : 3000;
     const item: RoutineItem = {
       id: newId(),
-      time: input.time.trim() || '—',
+      time: rangeText(range.startMin, range.endMin) || '弹性',
+      startMin: range.startMin,
+      endMin: range.endMin,
       title: text,
       kind,
-      durationSec,
+      durationSec: kind === 'routine' ? 0 : derived || fallback,
       sort: data.value.routine.length
         ? Math.max(...data.value.routine.map((r) => r.sort)) + 1
         : 0,
@@ -379,26 +430,35 @@ export const usePlanStore = defineStore('plan', () => {
 
   async function updateRoutine(
     id: number,
-    patch: Partial<Pick<RoutineItem, 'time' | 'title' | 'kind' | 'durationSec'>>
+    patch: Partial<Pick<RoutineItem, 'startMin' | 'endMin' | 'title' | 'kind'>>
   ): Promise<void> {
     const item = findRoutine(id);
     if (!item) return;
     const previousKind = item.kind;
     const previousDuration = item.durationSec;
 
-    if (typeof patch.time === 'string') item.time = patch.time.trim() || '—';
     if (typeof patch.title === 'string' && patch.title.trim()) {
       item.title = patch.title.trim();
     }
     if (patch.kind) item.kind = patch.kind;
+
+    // 起止时间一变，展示文本与倒计时时长都跟着重算
+    if (typeof patch.startMin === 'number' || typeof patch.endMin === 'number') {
+      const range = normalizeRange(
+        typeof patch.startMin === 'number' ? patch.startMin : item.startMin,
+        typeof patch.endMin === 'number' ? patch.endMin : item.endMin
+      );
+      item.startMin = range.startMin;
+      item.endMin = range.endMin;
+      item.time = rangeText(range.startMin, range.endMin) || '弹性';
+    }
+
     if (item.kind === 'routine') {
       item.durationSec = 0;
-    } else if (typeof patch.durationSec === 'number') {
-      item.durationSec = Math.min(86400, Math.max(60, Math.round(patch.durationSec)));
-    } else if (item.durationSec <= 0) {
-      item.durationSec = item.kind === 'break' ? 600 : 3000;
     } else {
-      item.durationSec = Math.min(86400, Math.max(60, Math.round(item.durationSec)));
+      const derived = durationFromRange(item.startMin, item.endMin, item.kind);
+      if (derived > 0) item.durationSec = derived;
+      else if (item.durationSec <= 0) item.durationSec = item.kind === 'break' ? 600 : 3000;
     }
 
     await requireDriver().upsertRoutine(item);
@@ -419,22 +479,6 @@ export const usePlanStore = defineStore('plan', () => {
       if (key.endsWith(suffix)) delete data.value.segmentTimers[key];
     }
     await requireDriver().deleteRoutine(id);
-  }
-
-  async function moveRoutine(id: number, delta: number): Promise<void> {
-    const ordered = routine.value;
-    const index = ordered.findIndex((item) => item.id === id);
-    const target = index + delta;
-    if (index < 0 || target < 0 || target >= ordered.length) return;
-    const current = ordered[index];
-    const neighbor = ordered[target];
-    const swap = current.sort;
-    current.sort = neighbor.sort;
-    neighbor.sort = swap;
-    await Promise.all([
-      requireDriver().upsertRoutine(current),
-      requireDriver().upsertRoutine(neighbor),
-    ]);
   }
 
   async function toggleCheck(dayIdx: number, routineId: number): Promise<void> {
@@ -677,6 +721,13 @@ export const usePlanStore = defineStore('plan', () => {
     days,
     routine,
     routineCount,
+    timeline,
+    timerSegments,
+    activeSegment,
+    activeSegmentIndex,
+    selectSegment,
+    stepSegment,
+    focusCurrentSegment,
     customTimers,
     runningCustomCount,
     theme,
@@ -712,7 +763,6 @@ export const usePlanStore = defineStore('plan', () => {
     addRoutine,
     updateRoutine,
     deleteRoutine,
-    moveRoutine,
     toggleCheck,
     toggleSegment,
     resetSegment,

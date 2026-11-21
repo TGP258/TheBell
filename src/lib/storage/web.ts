@@ -1,5 +1,6 @@
 import type { AppData, ThemeMode } from '../../types';
 import { createSeed } from '../seed';
+import { durationFromRange, parseRange } from '../segment';
 import type { StorageDriver } from './driver';
 
 const STORAGE_KEY = 'pascal.thebell.web.v1';
@@ -17,7 +18,18 @@ function hydrate(raw: unknown): AppData | null {
   data.theme = data.theme ?? 'system';
   for (const item of data.routine) {
     item.kind = item.kind ?? 'routine';
-    item.durationSec = item.durationSec ?? 0;
+    if (typeof item.startMin !== 'number' || typeof item.endMin !== 'number') {
+      const parsed = parseRange(item.time ?? '');
+      item.startMin = parsed.startMin;
+      item.endMin = parsed.endMin;
+      // 旧数据时长独立：保留计时长度，把结束时间对齐成「开始 + 时长」
+      if (item.kind !== 'routine' && (item.durationSec ?? 0) >= 60 && item.startMin >= 0) {
+        item.endMin = item.startMin + Math.min(1440, Math.round((item.durationSec ?? 0) / 60));
+      }
+    }
+    const derived = durationFromRange(item.startMin, item.endMin, item.kind);
+    item.durationSec =
+      item.kind === 'routine' ? 0 : derived || Math.max(0, item.durationSec ?? 0);
   }
   for (const timer of data.customTimers) {
     timer.remainingSec = timer.remainingSec ?? timer.durationSec;

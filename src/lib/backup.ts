@@ -15,7 +15,8 @@ import type {
 import { isCategory, isCountdownColor } from './categories';
 import { addDays, endDate, isDateStr, todayStr } from './date';
 import { newId } from './id';
-import { DEFAULT_ROUTINE, makeRoutine } from './seed';
+import { clockText, parseClock, parseRange } from './segment';
+import { DEFAULT_ROUTINE, makeRoutine, type RoutineInput } from './seed';
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -63,11 +64,13 @@ export function buildBackup(data: AppData): BackupFile {
   return {
     app: 'pascal.thebell',
     format: 'thebell/v1',
-    version: 'Dev0.1',
+    version: 'Dev0.2',
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
     routine: routine.map((item) => ({
       time: item.time,
+      start: item.startMin >= 0 ? clockText(item.startMin) : '',
+      end: item.endMin > 0 ? clockText(item.endMin) : '',
       title: item.title,
       kind: item.kind,
       durationSec: item.durationSec,
@@ -150,31 +153,35 @@ export function normalizeBackup(raw: unknown): {
   const totalDays = clamp(integer(planRaw.totalDays, 100), 1, 1000);
 
   const routineRaw = Array.isArray(root.routine) ? root.routine : [];
-  const routineSource = routineRaw
-    .map((item) => {
-      const record = asRecord(item);
-      if (!record) return null;
-      const title = text(record.title);
-      if (!title) return null;
-      const inferred = inferRoutine(title);
-      const kind = isRoutineKind(record.kind) ? record.kind : inferred.kind;
-      let durationSec =
-        kind === 'routine' ? 0 : integer(record.durationSec, inferred.durationSec);
-      if (kind === 'routine') durationSec = 0;
-      else durationSec = clamp(durationSec || inferred.durationSec, 60, 86400);
-      return {
-        time: text(record.time) || '—',
-        title,
-        kind,
-        durationSec,
-      };
-    })
-    .filter(
-      (
-        item
-      ): item is { time: string; title: string; kind: RoutineKind; durationSec: number } =>
-        item !== null
-    );
+  const routineSource: RoutineInput[] = [];
+  for (const item of routineRaw) {
+    const record = asRecord(item);
+    if (!record) continue;
+    const title = text(record.title);
+    if (!title) continue;
+    const inferred = inferRoutine(title);
+    const kind = isRoutineKind(record.kind) ? record.kind : inferred.kind;
+    const durationSec =
+      kind === 'routine' ? 0 : integer(record.durationSec, inferred.durationSec);
+
+    // 新版存 start/end；旧版只有 time 文本时解析出区间
+    let startMin = parseClock(text(record.start)) ?? -1;
+    let endMin = parseClock(text(record.end)) ?? -1;
+    if (startMin < 0) {
+      const parsed = parseRange(text(record.time));
+      startMin = parsed.startMin;
+      endMin = parsed.endMin;
+    }
+
+    routineSource.push({
+      time: text(record.time),
+      startMin,
+      endMin,
+      title,
+      kind,
+      durationSec,
+    });
+  }
 
   const routine: RoutineItem[] = makeRoutine(
     routineSource.length ? routineSource : DEFAULT_ROUTINE

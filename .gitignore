@@ -14,6 +14,7 @@ dist-ssr
 
 # 本地测试产物
 _shots/
+_dev*/
 _*.log
 
 # Editor directories and files

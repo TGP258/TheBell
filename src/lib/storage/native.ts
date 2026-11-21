@@ -14,6 +14,12 @@ import type {
 } from '../../types';
 import { isCategory, isCountdownColor } from '../categories';
 import { buildDates, isDateStr, todayStr } from '../date';
+import {
+  durationFromRange,
+  normalizeRange,
+  parseRange,
+  rangeText,
+} from '../segment';
 import { createSeed } from '../seed';
 import type { StorageDriver } from './driver';
 
@@ -65,6 +71,8 @@ const SCHEMA: string[] = [
   `CREATE TABLE IF NOT EXISTS routine (
      id INTEGER PRIMARY KEY,
      time_text TEXT NOT NULL,
+     start_min INTEGER NOT NULL DEFAULT -1,
+     end_min INTEGER NOT NULL DEFAULT -1,
      title TEXT NOT NULL,
      sort INTEGER NOT NULL,
      kind TEXT NOT NULL DEFAULT 'routine',
@@ -127,6 +135,8 @@ interface TaskRow {
 interface RoutineRow {
   id: number;
   time_text: string;
+  start_min: number;
+  end_min: number;
   title: string;
   sort: number;
   kind: string;
@@ -205,6 +215,12 @@ export class NativeDriver implements StorageDriver {
       );
       migrated = true;
     }
+    if (!names.has('start_min')) {
+      await this.run('ALTER TABLE routine ADD COLUMN start_min INTEGER NOT NULL DEFAULT -1');
+    }
+    if (!names.has('end_min')) {
+      await this.run('ALTER TABLE routine ADD COLUMN end_min INTEGER NOT NULL DEFAULT -1');
+    }
     if (migrated) {
       // 旧版本只有 time/title，按内容推断学习/休息段
       await this.run(
@@ -251,7 +267,7 @@ export class NativeDriver implements StorageDriver {
       'SELECT id, day_idx, category, title, done, sort, created_at, done_at FROM task ORDER BY day_idx, sort, id'
     );
     const routineRows = await this.query<RoutineRow>(
-      'SELECT id, time_text, title, sort, kind, duration_sec FROM routine ORDER BY sort, id'
+      'SELECT id, time_text, start_min, end_min, title, sort, kind, duration_sec FROM routine ORDER BY sort, id'
     );
     const checkRows = await this.query<CheckRow>(
       'SELECT day_idx, routine_id FROM routine_check WHERE done = 1'
@@ -293,26 +309,47 @@ export class NativeDriver implements StorageDriver {
       tasks: tasksByDay.get(index + 1) ?? [],
     }));
 
-    const routine: RoutineItem[] = routineRows.map((row) => {
+    const routine: RoutineItem[] = [];
+    for (const row of routineRows) {
       const kind: RoutineKind = isRoutineKind(row.kind) ? row.kind : 'routine';
-      const duration =
+      // 旧库只有 time_text，首次升级时解析成起止时间并回写
+      const legacy = typeof row.start_min !== 'number' || row.start_min < 0;
+      let startMin = typeof row.start_min === 'number' ? row.start_min : -1;
+      let endMin = typeof row.end_min === 'number' ? row.end_min : -1;
+      if (legacy && row.time_text) {
+        const parsed = parseRange(row.time_text);
+        startMin = parsed.startMin;
+        endMin = parsed.endMin;
+        // 旧版时长时间是独立字段，且可能与文本不一致：保留原来的计时长度，
+        // 把结束时间对齐成「开始 + 时长」，升级后倒计时行为不变
+        if (kind !== 'routine' && row.duration_sec >= 60 && startMin >= 0) {
+          endMin = startMin + Math.min(1440, Math.round(row.duration_sec / 60));
+        }
+      }
+      const range = normalizeRange(startMin, endMin);
+      const derived = durationFromRange(range.startMin, range.endMin, kind);
+      const stored = Math.max(60, Math.round(row.duration_sec || 0));
+      const durationSec =
         kind === 'routine'
           ? 0
-          : Math.max(
-              60,
-              Math.round(
-                row.duration_sec || (kind === 'break' ? 600 : 3000)
-              )
-            );
-      return {
+          : derived || (row.duration_sec > 0 ? stored : kind === 'break' ? 600 : 3000);
+
+      const item: RoutineItem = {
         id: row.id,
-        time: row.time_text,
+        time: rangeText(range.startMin, range.endMin) || row.time_text || '弹性',
+        startMin: range.startMin,
+        endMin: range.endMin,
         title: row.title,
         sort: row.sort,
         kind,
-        durationSec: duration,
+        durationSec,
       };
-    });
+      routine.push(item);
+
+      if (startMin !== row.start_min || endMin !== row.end_min || item.time !== row.time_text) {
+        await this.upsertRoutine(item);
+      }
+    }
 
     const checks: Record<string, boolean> = {};
     for (const row of checkRows) checks[`${row.day_idx}:${row.routine_id}`] = true;
@@ -407,9 +444,18 @@ export class NativeDriver implements StorageDriver {
 
   async upsertRoutine(item: RoutineItem): Promise<void> {
     await this.run(
-      `INSERT OR REPLACE INTO routine(id, time_text, title, sort, kind, duration_sec)
-       VALUES(?, ?, ?, ?, ?, ?)`,
-      [item.id, item.time, item.title, item.sort, item.kind, item.durationSec]
+      `INSERT OR REPLACE INTO routine(id, time_text, start_min, end_min, title, sort, kind, duration_sec)
+       VALUES(?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        item.id,
+        item.time,
+        item.startMin,
+        item.endMin,
+        item.title,
+        item.sort,
+        item.kind,
+        item.durationSec,
+      ]
     );
   }
 
@@ -539,8 +585,17 @@ export class NativeDriver implements StorageDriver {
 
     for (const item of data.routine) {
       statements.push({
-        sql: 'INSERT OR REPLACE INTO routine(id, time_text, title, sort, kind, duration_sec) VALUES(?, ?, ?, ?, ?, ?)',
-        args: [item.id, item.time, item.title, item.sort, item.kind, item.durationSec],
+        sql: 'INSERT OR REPLACE INTO routine(id, time_text, start_min, end_min, title, sort, kind, duration_sec) VALUES(?, ?, ?, ?, ?, ?, ?, ?)',
+        args: [
+          item.id,
+          item.time,
+          item.startMin,
+          item.endMin,
+          item.title,
+          item.sort,
+          item.kind,
+          item.durationSec,
+        ],
       });
     }
 

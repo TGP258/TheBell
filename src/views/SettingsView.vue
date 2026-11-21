@@ -337,7 +337,7 @@ function resetAll(): void {
               <b>TheBell</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">Dev0.1</span>
+            <span class="version-tag">Dev0.2</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>
