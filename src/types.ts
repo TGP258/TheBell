@@ -114,6 +114,8 @@ export interface AppData {
   countdowns: Countdown[];
   home: HomeLayout;
   theme: ThemeMode;
+  /** 未完成任务是否自动顺延到今天（false = 手动顺延） */
+  autoPostpone: boolean;
 }
 
 export interface DayProgress {
@@ -185,7 +187,7 @@ export interface BackupFile {
   customTimers?: BackupCustomTimer[];
   segmentTimers?: BackupSegmentTimer[];
   home?: BackupHome;
-  settings?: { theme?: ThemeMode };
+  settings?: { theme?: ThemeMode; autoPostpone?: boolean };
 }
 
 export interface BackupSummary {

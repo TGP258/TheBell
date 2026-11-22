@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import {
   Check,
   ChevronRight,
@@ -19,9 +19,22 @@ import { parseBackup, serializeBackup } from '../lib/backup';
 import { fullDateCN } from '../lib/date';
 import { usePlanStore } from '../stores/plan';
 import { toast } from '../lib/toast';
+import { platformInfo as loadPlatformInfo, type PlatformInfo } from '../lib/deviceinfo';
 import AppModal from '../components/AppModal.vue';
 
 const store = usePlanStore();
+
+const platformLabel = ref<PlatformInfo | null>(null);
+onMounted(() => {
+  void loadPlatformInfo().then((info) => {
+    platformLabel.value = info;
+  });
+});
+const platformText = computed(() => {
+  const info = platformLabel.value;
+  if (!info) return '…';
+  return info.ui ? `${info.name} · ${info.ui}` : info.name;
+});
 
 const planName = ref('');
 const planStart = ref('');
@@ -303,6 +316,35 @@ function resetAll(): void {
         />
       </section>
 
+      <section class="card set-card span-2">
+        <div class="set-head">
+          <h3>学习任务</h3>
+          <p>未完成任务的顺延方式</p>
+        </div>
+        <div class="set-body">
+          <div class="mode-grid">
+            <button
+              class="mode-option"
+              :class="{ active: store.autoPostpone }"
+              @click="store.setAutoPostpone(true)"
+            >
+              <span class="mode-name">自动顺延</span>
+              <span class="mode-desc">之前未完成的任务自动出现在今天，完成即消失</span>
+              <span v-if="store.autoPostpone" class="mode-check"><Check :size="12" /></span>
+            </button>
+            <button
+              class="mode-option"
+              :class="{ active: !store.autoPostpone }"
+              @click="store.setAutoPostpone(false)"
+            >
+              <span class="mode-name">手动顺延</span>
+              <span class="mode-desc">任务留在原定日期，切换到那一天后自行顺延到今天</span>
+              <span v-if="!store.autoPostpone" class="mode-check"><Check :size="12" /></span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <section class="card set-card">
         <div class="set-head">
           <h3>存储</h3>
@@ -337,12 +379,12 @@ function resetAll(): void {
               <b>TheBell</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">Dev0.4.2201</span>
+            <span class="version-tag">Dev0.4.2202</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>
             <li><span>技术栈</span><b>Vue 3 · Capacitor 7 · SQLite</b></li>
-            <li><span>平台</span><b>Android / iPadOS（可移植）</b></li>
+            <li><span>平台</span><b>{{ platformText }}</b></li>
           </ul>
           <p class="about-note">
             数据优先存本地，不联网、不上传。建议定期导出 JSON 备份。
@@ -542,6 +584,57 @@ function resetAll(): void {
 }
 .hidden-file {
   display: none;
+}
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.mode-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  text-align: left;
+  transition: all 0.15s ease;
+}
+.mode-option:hover {
+  border-color: var(--border-strong);
+}
+.mode-option.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.mode-name {
+  font-size: 13px;
+  font-weight: 650;
+  padding-right: 22px;
+}
+.mode-desc {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.mode-check {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--primary);
+  color: #fff;
+  display: grid;
+  place-items: center;
+}
+@container (max-width: 760px) {
+  .mode-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .storage {
   display: flex;

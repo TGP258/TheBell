@@ -1,7 +1,7 @@
 {
   "name": "thebell",
   "private": true,
-  "version": "0.4.2201-dev",
+  "version": "0.4.2202-dev",
   "type": "module",
   "scripts": {
     "dev": "vite",

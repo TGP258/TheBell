@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
-import { CheckCircle2, ChevronLeft, ChevronRight, Plus } from 'lucide-vue-next';
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Plus } from 'lucide-vue-next';
 import type { Category, Task } from '../types';
 import { CATEGORY_LIST, CATEGORY_META } from '../lib/categories';
 import { relativeLabel, shortDate, weekdayCN } from '../lib/date';
@@ -30,8 +30,16 @@ const dayLabel = computed(() => {
   return relativeLabel(date) || weekdayCN(date);
 });
 
-/** 今天才显示继承区：之前所有未完成任务 */
-const inherited = computed(() => (isToday.value ? store.inheritedTasks : []));
+/** 今天 + 自动顺延时显示继承区：之前所有未完成任务 */
+const inherited = computed(() =>
+  isToday.value && store.autoPostpone ? store.inheritedTasks : []
+);
+const inheritedOpen = ref(true);
+
+/** 手动顺延模式下的轻提示条数（仅今天） */
+const manualHint = computed(() =>
+  isToday.value && !store.autoPostpone ? store.inheritedTasks.length : 0
+);
 
 function badgeFor(task: Task): string {
   return shortDate(store.getDay(task.dayIdx)?.date ?? '');
@@ -141,23 +149,30 @@ function openPostpone(task: Task): void {
 
     <div v-if="viewDay" class="tasks-body">
       <div v-if="inherited.length" class="task-group inherited">
-        <div class="group-head">
+        <button class="group-head fold" @click="inheritedOpen = !inheritedOpen">
           <span class="group-dot inherit" />
           <span class="group-name">继承任务</span>
           <span class="group-count num">{{ inherited.length }}</span>
-        </div>
-        <TaskRow
-          v-for="task in inherited"
-          :key="task.id"
-          :task="task"
-          :badge="badgeFor(task)"
-          show-category
-          postponable
-          @toggle="store.toggleTask(task.id)"
-          @postpone="openPostpone(task)"
-        />
-        <p class="inherit-hint">之前未完成的任务会自动出现在这里，完成后自动消失</p>
+          <ChevronDown :size="14" class="fold-icon" :class="{ open: inheritedOpen }" />
+        </button>
+        <template v-if="inheritedOpen">
+          <TaskRow
+            v-for="task in inherited"
+            :key="task.id"
+            :task="task"
+            :badge="badgeFor(task)"
+            show-category
+            postponable
+            @toggle="store.toggleTask(task.id)"
+            @postpone="openPostpone(task)"
+          />
+          <p class="inherit-hint">之前未完成的任务会自动出现在这里，完成后自动消失</p>
+        </template>
       </div>
+
+      <p v-else-if="manualHint" class="manual-hint">
+        还有 {{ manualHint }} 条未完成任务留在之前几天，切换到那一天后可顺延到今天
+      </p>
 
       <div v-for="group in groups" :key="group.meta.id" class="task-group">
         <div class="group-head">
@@ -325,6 +340,36 @@ function openPostpone(task: Task): void {
   font-size: 11px;
   color: var(--faint);
   line-height: 1.5;
+}
+.group-head.fold {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.group-head.fold:hover {
+  background: var(--surface-2);
+}
+.fold-icon {
+  flex: none;
+  color: var(--faint);
+  transition: transform 0.15s ease;
+}
+.fold-icon.open {
+  transform: rotate(0deg);
+}
+.fold-icon:not(.open) {
+  transform: rotate(-90deg);
+}
+.manual-hint {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin-top: 6px;
 }
 
 .composer {

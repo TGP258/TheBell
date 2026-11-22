@@ -77,7 +77,7 @@ export function buildBackup(data: AppData): BackupFile {
   return {
     app: 'pascal.thebell',
     format: 'thebell/v1',
-    version: 'Dev0.4',
+    version: 'Dev0.4.2202',
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
     routine: routine.map((item) => ({
@@ -141,7 +141,7 @@ export function buildBackup(data: AppData): BackupFile {
         .map((id) => countdownIndex.get(id))
         .filter((index): index is number => index !== undefined),
     },
-    settings: { theme: data.theme },
+    settings: { theme: data.theme, autoPostpone: data.autoPostpone },
   };
 }
 
@@ -348,6 +348,7 @@ export function normalizeBackup(raw: unknown): {
     themeRaw === 'light' || themeRaw === 'dark' || themeRaw === 'system'
       ? themeRaw
       : 'system';
+  const autoPostpone = settings?.autoPostpone !== false;
 
   const homeRaw = asRecord(root.home);
   const heroIndex = homeRaw ? integer(homeRaw.heroCountdownIndex, -1) : -1;
@@ -377,6 +378,7 @@ export function normalizeBackup(raw: unknown): {
     countdowns,
     home,
     theme,
+    autoPostpone,
   };
 
   return {

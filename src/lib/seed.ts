@@ -100,6 +100,7 @@ export function emptyData(): AppData {
     countdowns: [],
     home: defaultHome(),
     theme: 'system',
+    autoPostpone: true,
   };
 }
 
@@ -162,5 +163,6 @@ export function createSeed(): AppData {
     countdowns: [],
     home: defaultHome(),
     theme: 'system',
+    autoPostpone: true,
   };
 }

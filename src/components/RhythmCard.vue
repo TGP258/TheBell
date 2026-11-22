@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { Check, Clock3, Pencil, Plus, Trash2 } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronRight, Clock3, Pencil, Plus, Trash2 } from 'lucide-vue-next';
 import type { RoutineItem } from '../types';
 import { clockText, coversNow, durationText, fmtCountdown, nowMinutes } from '../lib/segment';
 import { usePlanStore } from '../stores/plan';
@@ -16,6 +16,15 @@ const nowMin = computed(() => nowMinutes(store.nowMs));
 const routineDialogOpen = ref(false);
 const editingRoutine = ref<RoutineItem | null>(null);
 const manageRoutine = ref(false);
+
+/** 已勾选完成的项目是否折叠收起 */
+const doneFolded = ref(false);
+
+const doneCount = computed(() => routineDone.value);
+const visibleTimeline = computed(() => {
+  if (!doneFolded.value || !day.value) return store.timeline;
+  return store.timeline.filter((item) => !store.isRoutineDone(day.value!.idx, item.id));
+});
 
 function openRoutineDialog(item: RoutineItem | null): void {
   editingRoutine.value = item;
@@ -72,7 +81,7 @@ async function removeRoutine(item: RoutineItem): Promise<void> {
     <div v-if="day" class="routine-body">
       <div v-if="store.timeline.length" class="timeline">
         <article
-          v-for="item in store.timeline"
+          v-for="item in visibleTimeline"
           :key="item.id"
           class="tl-item"
           :class="[
@@ -135,6 +144,16 @@ async function removeRoutine(item: RoutineItem): Promise<void> {
           </div>
         </article>
       </div>
+
+      <button
+        v-if="doneCount && !manageRoutine"
+        class="done-fold"
+        :class="{ open: !doneFolded }"
+        @click="doneFolded = !doneFolded"
+      >
+        <component :is="doneFolded ? ChevronRight : ChevronDown" :size="13" />
+        {{ doneFolded ? '展开' : '收起' }}已完成 {{ doneCount }} 项
+      </button>
 
       <div v-if="!store.timeline.length" class="empty">
         <span class="empty-icon"><Clock3 :size="24" /></span>
@@ -408,6 +427,26 @@ html[data-theme="dark"] .tl-item.break .tl-kind {
   color: var(--muted);
   padding: 4px 8px;
   border-radius: 8px;
+}
+.done-fold {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 0;
+  border-radius: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px dashed var(--border);
+  transition: all 0.15s ease;
+}
+.done-fold:hover {
+  color: var(--text-2);
+  border-color: var(--border-strong);
 }
 .mini-link:hover,
 .mini-link.active {

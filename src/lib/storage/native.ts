@@ -289,6 +289,9 @@ export class NativeDriver implements StorageDriver {
     const homeRows = await this.query<MetaRow>(
       "SELECT value FROM meta WHERE key = 'home_layout'"
     );
+    const autoPostponeRows = await this.query<MetaRow>(
+      "SELECT value FROM meta WHERE key = 'auto_postpone'"
+    );
 
     const tasksByDay = new Map<number, Task[]>();
     for (const row of taskRows) {
@@ -413,6 +416,7 @@ export class NativeDriver implements StorageDriver {
       countdowns,
       home,
       theme,
+      autoPostpone: autoPostponeRows[0]?.value !== '0',
     };
   }
 
@@ -553,6 +557,13 @@ export class NativeDriver implements StorageDriver {
     ]);
   }
 
+  async setAutoPostpone(on: boolean): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
+      'auto_postpone',
+      on ? '1' : '0',
+    ]);
+  }
+
   async setHome(layout: HomeLayout): Promise<void> {
     await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
       'home_layout',
@@ -579,6 +590,10 @@ export class NativeDriver implements StorageDriver {
       {
         sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
         args: ['theme', data.theme],
+      },
+      {
+        sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
+        args: ['auto_postpone', data.autoPostpone === false ? '0' : '1'],
       },
       {
         sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',

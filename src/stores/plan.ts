@@ -102,6 +102,8 @@ export const usePlanStore = defineStore('plan', () => {
     () => customTimers.value.filter((timer) => customRunning(timer)).length
   );
   const theme = computed(() => data.value.theme);
+  /** 顺延模式：true = 之前未完成任务自动出现在今天；false = 手动顺延 */
+  const autoPostpone = computed(() => data.value.autoPostpone !== false);
   const effectiveTheme = computed<'light' | 'dark'>(() => {
     if (theme.value === 'system') return systemDark.value ? 'dark' : 'light';
     return theme.value;
@@ -769,6 +771,11 @@ export const usePlanStore = defineStore('plan', () => {
     await setTheme(effectiveTheme.value === 'dark' ? 'light' : 'dark');
   }
 
+  async function setAutoPostpone(on: boolean): Promise<void> {
+    data.value.autoPostpone = on;
+    await requireDriver().setAutoPostpone(on);
+  }
+
   async function importData(next: AppData): Promise<void> {
     data.value = next;
     await requireDriver().replaceAll(next);
@@ -801,6 +808,7 @@ export const usePlanStore = defineStore('plan', () => {
     runningCustomCount,
     theme,
     effectiveTheme,
+    autoPostpone,
     todayIdx,
     currentDayIdx,
     currentDay,
@@ -858,6 +866,7 @@ export const usePlanStore = defineStore('plan', () => {
     pinCountdown,
     setTheme,
     toggleTheme,
+    setAutoPostpone,
     importData,
     resetAll,
   };
