@@ -1,238 +1,214 @@
-# TheBell
+<div align="center">
+  <img src="resources/icon.png" width="120" alt="TheBell" />
+  <h1>TheBell</h1>
+  <p>以 50 分钟学习 + 10 分钟休息为节奏的学习时钟、计划与倒数日应用</p>
+  <p>
+    <img src="https://img.shields.io/badge/platform-Android%20%7C%20iPadOS-blue" alt="Platform" />
+    <img src="https://img.shields.io/badge/framework-Vue%203%20%2B%20Capacitor%207-brightgreen" alt="Framework" />
+    <img src="https://img.shields.io/badge/storage-SQLite%20%2F%20offline-orange" alt="Storage" />
+  </p>
+</div>
 
-一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**1.0（稳定版）**。
+---
 
-本仓库的 `main` 分支是 TheBell 的**稳定版基线**（软件名 TheBell，包名 `pascal.thebell.std`，独立计版）；开发变更在 `dev` 分支（TheBell_Dev / TheBell Beta）上集成，经真机验证后按发布节奏合并到本分支。
+TheBell 面向考研、自学考试、语言考试、职业资格考试，以及任何需要长时间专注学习的场景。
 
-本仓库是 TheBell 的**开发版主线**（项目名 `TheBell_Dev`），面向用户安装的软件名为 **TheBell Beta**；稳定版本在独立的稳定版分支仓库中整理发布，本仓库的变更经真机验证后再汇入。
+> 本仓库的 `main` 分支是 **TheBell 稳定版基线**（软件名 TheBell，包名 `pascal.thebell.std`，独立语义化计版）；开发版基线在 `dev` 分支（软件名 TheBell Beta，包名 `pascal.thebell`），新功能在 dev 上集成并经真机验证后按发布节奏合并到本分支。应用以「50 分钟专注 + 10 分钟休息」为核心节奏，将一天的作息展开为可勾选的时间线，配合每日学习任务与目标倒数日，帮助维持稳定的复习节奏。
 
-适用于考研、自学考试、语言考试、职业资格考试，以及任何需要长时间专注的场景。
+- **完全离线**：所有数据保存在本地（SQLite / localStorage），不联网、不上传
+- **Android 原生 APK**：基于 Capacitor 7，平板横屏使用左侧导航 + 双栏布局，手机使用底部导航
+- **iPadOS 就绪**：同一套 Web 代码，`ios/App` 工程已生成，可在 macOS 上用 Xcode 构建签名
 
-- Android：原生 APK（Capacitor 7 + 原生 SQLite）
-- iPadOS：同一套 Web 代码，已生成 `ios/App` 工程（需在 macOS 上用 Xcode 构建）
-- 宽屏：平板横屏使用左侧导航 + 双栏布局；手机使用底部导航
-- 数据：全部本地存储，不联网、不上传
+## 功能特性
 
-## 功能
+### 节奏与计时
 
-- **50/10 节奏模板**：默认只保留早 / 午 / 晚起居节点，其余时间切成 50 分钟学习 + 10 分钟休息；时间段类型、起止时间、内容、顺序均可编辑
-- **时间线节奏**：今日节奏按开始时间排成一条纵向时间线，左侧时间、右侧内容，一眼看清一天的走向
-- **单卡倒计时**：左栏顶部（与学习任务同宽）只有一张倒计时卡，与右侧时间线并排；左右箭头切换时段（也可直接点时间线），支持开始 / 暂停 / 重置 / 本段完成
-- **首页布局自定义**：卡片可显示/隐藏、整行/左栏/右栏、栏内上下排序；可选首页展示哪些独立计时器与倒数日
-- **倒数日主卡背景**：紫罗兰 / 日落 / 深海 / 森林 / 午夜 / 樱花六套渐变，可指定主卡展示哪个倒数日
-- **时长随时间走**：倒计时时长由起止时间自动推导，改成 10:00–10:30 就是 30 分钟，不会停留在旧的 50 分钟
-- **自绘时间选择器**：时 / 分双滚轮，带大号预览与「使用当前时间」，比系统弹窗更贴合应用视觉
-- **独立计时页**：可创建任意数量的自定义计时器，各自设置时长与颜色，可同时运行、互不冲突
-- **计划天数自定义**：默认 100 天，范围 1–1000 天；开始日期可改，日期自动顺延
-- **每日任务**：数学 / 专业课 / 外语 / 公共课 / 其他五个科目；逐条勾选划线、编辑、删除；按天独立
-- **倒数日**：主倒数 + 多个目标日，支持颜色与置顶
-- **JSON 导入 / 导出**：包含计划、任务、作息起止时间、打卡状态、分段计时、独立计时器、倒数日、主题
+- **50/10 节奏模板**：默认只保留早 / 午 / 晚起居节点，其余时间自动切成 50 分钟学习 + 10 分钟休息；时间段类型、起止时间、内容与顺序均可编辑
+- **时间线视图**：今日节奏按开始时间排成纵向时间线，已完成的项可一键收起
+- **分段倒计时**：左右箭头切换时段（也可直接点时间线），支持开始 / 暂停 / 重置 / 本段完成；倒计时时长由起止时间自动推导，修改时间后立即生效
+- **独立计时器**：可创建任意数量的自定义计时器，各自设置时长与颜色，可同时运行
+
+### 计划与任务
+
+- **计划自定义**：默认 100 天，范围 1–1000 天；开始日期可改，日期自动顺延
+- **每日任务**：数学 / 专业课 / 外语 / 公共课 / 其他五个科目，逐条勾选、编辑、删除
+- **任务继承与顺延**：之前未完成的任务可自动出现在今天（默认自动顺延，也可切换为手动顺延）；单条任务可顺延到明天 / 后天，或通过自绘的年 / 月 / 日滚轮日期选择器指定日期
+- **倒数日**：主倒数 + 多个目标日，支持六套渐变背景、颜色与置顶
+
+### 个性化
+
+- **首页布局自定义**：卡片可显示 / 隐藏、整行 / 左栏 / 右栏、栏内上下排序，自由选择要展示的计时器与倒数日
+- **自绘选择器**：时间（时 / 分双滚轮）与日期（年 / 月 / 日三滚轮）均为自绘组件，与应用视觉一致
 - **主题**：浅色 / 深色 / 跟随系统
-- **版本**：`versionName = 1.0`（stable 变体），软件名 TheBell，包名 `pascal.thebell.std`
-- **双基线**：本仓库 `dev` 分支为开发版基线，`main` 分支为稳定版基线（软件名 TheBell，包名 `pascal.thebell.std`）；包名 / 软件名 / 图标差异由 Product Flavors 管理（`dev` / `stable` 两个变体），业务代码完全同源
+
+### 数据管理
+
+- **JSON 导入 / 导出**：包含计划、任务、作息、打卡状态、计时状态、倒数日与主题，可跨设备迁移
+- **平台信息**：设置页显示真实系统版本与厂商 UI 版本（小米 HyperOS / MIUI），运行时读取，无额外权限
+
+## 下载安装
+
+前往 [Releases](https://github.com/TGP258/TheBell/releases) 下载对应版本：
+
+| 变体 | 软件名 | 包名 | 说明 |
+|---|---|---|---|
+| Stable（当前分支） | TheBell | `pascal.thebell.std` | 跟随 `main` 分支，更新节奏更慢，适合长期使用 |
+| Beta（开发版） | TheBell Beta | `pascal.thebell` | 跟随 `dev` 分支，更新频繁，包含最新功能 |
+
+两个变体可以并存安装；数据保存在各自的应用目录中，互不影响。
 
 ## 技术栈
 
 | 层 | 选型 |
 |---|---|
-| UI | Vue 3 + TypeScript + Vite，手写 HeroUI 风格设计系统 |
-| 跨平台 | Capacitor 7（Android 真机验证，iOS 工程已生成） |
-| 本地数据库 | Android 原生 SQLite（自定义 `PascalDb` 插件） |
-| 备份 | JSON `thebell/v1` |
-
-选择 Capacitor 而不是 Flutter：现有业务是 Web 技术栈，一次开发即可同时产出 Android 与 iPadOS 工程，平板宽屏用 CSS 容器查询适配成本最低。
+| UI | Vue 3 + TypeScript + Vite，手写设计系统 |
+| 跨平台 | Capacitor 7 |
+| 本地数据库 | Android 原生 SQLite（自定义 `PascalDb` 插件），浏览器环境降级为 `localStorage` |
+| 备份格式 | JSON（`thebell/v1`），兼容旧版 `studyplan/v1` |
 
 ## 本地开发
 
-环境：Node 20+、JDK 21、Android SDK 35。
+环境要求：Node 20+、JDK 21、Android SDK 35（build-tools 35.0.0）。
 
 ```bash
 npm install
-npm run dev          # 浏览器预览（数据存 localStorage）
-npm run build        # 类型检查 + 构建
-npx cap sync android # 同步 Web 资源到 Android 工程
+npm run dev            # 浏览器预览（数据存 localStorage）
+npm run build          # 类型检查 + 生产构建
+npx cap sync android   # 同步 Web 资源到 Android 工程
 ```
 
 ### Android 构建
 
 ```bash
 cd android
-./gradlew assembleDebug
-# Windows 本机也可用已安装的 Gradle：
-# JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" \
-#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleDevDebug      # 开发变体（TheBell Beta）
-#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleStableDebug  # 稳定变体（TheBell）
+./gradlew assembleDevDebug     # 开发变体（TheBell Beta）
+./gradlew assembleStableDebug  # 稳定变体（TheBell）
 ```
 
-产物：`android/app/build/outputs/apk/debug/app-debug.apk`
+产物位于 `android/app/build/outputs/apk/{dev,stable}/debug/`。
 
-> 本项目固定 `buildToolsVersion 35.0.0`，并在根 `build.gradle` 中统一所有子模块（含 Capacitor 库模块）的 build-tools，避免损坏的 34.0.0 影响构建。
+### iOS
 
-### iPadOS
-
-`ios/App` 已生成并同步插件（Bundle ID `pascal.thebell`，`TARGETED_DEVICE_FAMILY = 1,2`）。在 macOS 上：
+`ios/App` 工程已生成（需在 macOS 上构建，CocoaPods 依赖由 `cap sync ios` 安装）：
 
 ```bash
-npm install
-npm run build
+npm install && npm run build
 npx cap sync ios
 open ios/App/App.xcworkspace
 ```
 
-用 Xcode 选择 iPad 模拟器或真机运行。需要 CocoaPods（`pod install` 由 `cap sync` 调用）。当前 Windows 环境无法编译/签名 iOS，属于未验证项。
+## 仓库结构
 
-## 项目结构
+本仓库采用**单仓库双基线**：`dev` 分支为开发版基线（日更节奏），`main` 分支为稳定版基线（月更节奏）。包名、软件名与图标的差异由 Product Flavors 管理（`dev` / `stable` 两个变体），业务代码在两条分支间完全同源；软件名与版本号在运行时通过 `DeviceInfoPlugin` 注入，避免标识类代码进入业务逻辑。
 
 ```
 src/
-  views/            今日 / 计划 / 计时 / 倒数日 / 设置
-  components/       首页卡片组件（Hero/统计/倒计时/任务/节奏/计时器/倒数日）、时间滚轮选择器、各类编辑对话框
-  stores/plan.ts    Pinia 状态：计划、作息、双计时系统与全部业务动作
+  views/              今日 / 计划 / 计时 / 倒数日 / 设置
+  components/         首页卡片、时间与日期滚轮选择器、各类编辑对话框
+  stores/plan.ts      Pinia 状态：计划、作息、计时系统与业务动作
   lib/
-    storage/        StorageDriver：native(SQLite) / web(localStorage)
-    backup.ts       JSON 构建、校验与恢复
-    seed.ts         默认 100 天计划 + 50/10 节奏模板
-    date.ts         本地日期计算
+    storage/          StorageDriver：native(SQLite) / web(localStorage)
+    deviceinfo.ts     设备与应用信息（软件名 / 版本号运行时注入）
+    backup.ts         JSON 构建、校验与恢复
+    seed.ts           默认 100 天计划 + 50/10 节奏模板
 android/
-  app/src/main/java/pascal/thebell/PascalDbPlugin.java
-ios/App/            Xcode 工程
+  app/src/main/       共享代码与资源（PascalDb、DeviceInfo 插件）
+  app/src/dev/        dev 变体资源（启动图标、应用内品牌图）
+  app/src/stable/     stable 变体资源
+ios/App/              Xcode 工程
 scripts/
-  logo.py           生成 logo SVG 与 Android 自适应图标矢量层
-  render_icons.mjs  用无头 Chrome 把 SVG 光栅化成各密度 PNG / iOS 图标
-  generate_assets.py 生成启动图
+  logo.py             生成 logo SVG 与 Android 自适应图标矢量层
+  render_icons.mjs    用无头 Chrome 将 SVG 光栅化为各密度 PNG / iOS 图标
 ```
 
-## SQLite 结构
+## 数据存储
 
-单计划模型，任务、作息、计时都不存 JSON blob：
+### SQLite（Android）
 
 | 表 | 说明 |
 |---|---|
 | `plan(id=1)` | 名称、开始日期、总天数 |
 | `day(idx, date)` | 第 idx 天对应的真实日期 |
-| `task(id, day_idx, category, title, done, sort, created_at, done_at)` | 每日任务，`idx_task_day` / `idx_task_done` 索引 |
-| `routine(id, time_text, start_min, end_min, title, sort, kind, duration_sec)` | 全局作息模板；`kind = routine / study / break`，`start_min / end_min` 为分钟数（跨日为 `>1440`） |
-| `routine_check(day_idx, routine_id, done)` | 按天打卡，联合主键 |
-| `segment_timer(day_idx, routine_id, remaining_sec, ends_at)` | 学习 / 休息段的按天倒计时状态 |
-| `custom_timer(id, title, duration_sec, remaining_sec, ends_at, color, created_at)` | 独立计时器 |
-| `countdown(id, title, target_date, color, pinned)` | 倒数日 |
-| `meta(key, value)` | 主题与首页布局（`home_layout` JSON） |
+| `task` | 每日任务（`id, day_idx, category, title, done, sort, created_at, done_at`） |
+| `routine` | 全局作息模板（`kind = routine / study / break`，起止时间为分钟数，跨日 `>1440`） |
+| `routine_check` | 按天打卡（联合主键） |
+| `segment_timer` | 学习 / 休息段的按天倒计时状态 |
+| `custom_timer` | 独立计时器 |
+| `countdown` | 倒数日 |
+| `meta` | 主题、首页布局与全局偏好 |
 
-`duration_sec` 由起止时间推导（`(end_min - start_min) × 60`），因此改时间就是改倒计时；旧库只有 `time_text` 时，首次启动会解析成 `start_min / end_min` 并回写。
+计时状态只存「剩余秒数 + 结束时间戳」：运行中由 `ends_at` 实时推算，不每秒写库；暂停时换算回 `remaining_sec`。因此应用切后台甚至被系统回收后，恢复时计时依然准确。
 
-计时状态只存「剩余秒数 + 结束时间戳」：运行时由 `ends_at` 推算，不每秒写库；暂停时换算回 `remaining_sec`。因此切后台、杀进程后恢复仍能继续。
-
-## JSON 备份格式
+### JSON 备份（`thebell/v1`）
 
 ```json
 {
   "app": "pascal.thebell",
   "format": "thebell/v1",
-  "version": "Dev0.4.2204",
   "plan": { "name": "我的学习计划", "startDate": "2026-11-21", "totalDays": 100 },
   "routine": [
-    { "time": "08:00–08:50", "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 },
-    { "time": "08:50–09:00", "start": "08:50", "end": "09:00", "title": "休息 10 分钟", "kind": "break", "durationSec": 600 }
+    { "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 }
   ],
-  "days": [{
-    "idx": 1,
-    "date": "2026-11-21",
-    "tasks": [{ "category": "math", "title": "真题一套", "done": false, "sort": 0 }],
-    "routineDone": [0, 2]
-  }],
-  "customTimers": [
-    { "title": "背单词", "durationSec": 1500, "remainingSec": 900, "color": "violet" }
+  "days": [
+    { "idx": 1, "date": "2026-11-21", "tasks": [{ "category": "math", "title": "真题一套", "done": false }], "routineDone": [0] }
   ],
-  "segmentTimers": [
-    { "dayIdx": 1, "routineIndex": 1, "remainingSec": 2400 }
-  ],
-  "countdowns": [{ "title": "目标日", "targetDate": "2027-01-01", "color": "violet", "pinned": true }],
-  "home": {
-    "cards": [
-      { "id": "hero", "visible": true, "zone": "full" },
-      { "id": "segment", "visible": true, "zone": "left" },
-      { "id": "rhythm", "visible": true, "zone": "right" }
-    ],
-    "heroCountdownIndex": 0,
-    "heroTheme": "sunset",
-    "timerIndexes": [0],
-    "countdownIndexes": [0]
-  },
-  "settings": { "theme": "system" }
+  "countdowns": [{ "title": "目标日", "targetDate": "2027-01-01", "color": "violet", "pinned": true }]
 }
 ```
 
-导入时会重新校验日期、科目、作息类型与时长、计时索引，并重建 ID；导出的计时器统一转为暂停状态，避免跨设备恢复时出现负数。
+导入时重新校验日期、科目、作息类型与时长，并重建 ID；导出的计时器统一转为暂停状态，避免跨设备恢复出现异常。
 
-## 图标与 Logo
+## 品牌资产
 
-猫耳时钟：白色底、黑色圆环、暗金色轴心，分针指向 5 点后延伸成猫尾巴，圆环顶部两只带弧度的猫耳。
+猫耳时钟：白色底、黑色圆环、暗金色轴心，分针指向 5 点后延伸为猫尾，圆环顶部两只带弧度的猫耳。
 
-- 源文件：`resources/icon.svg`（1024，白色圆角底，按部件分组：ring / ear-left / ear-right / hand-hour / hand-minute / cat-tail / center-pin）、`icon-square.svg`、`icon-round.svg`、`logo.svg`（透明底）、`icon-monochrome.svg`（单色剪影）、`icon-bw.svg`（黑白墨稿）
-- 申报图样：`icon-1500.png`（彩色）、`icon-bw-1500.png`（黑白），打包件 `D:/TheBell-icon-source.zip`
-- 生成：`python scripts/logo.py` 输出 SVG 与 Android 矢量层；`node scripts/render_icons.mjs` 光栅化 `mipmap-*/ic_launcher*.png`、`resources/icon.png` 与 iOS `AppIcon`
-- 自适应图标：108dp 画布，纯白 `background` + 矢量 `foreground`，图形控制在中心 66dp 安全区内，耳朵 / 尾巴不会被任何遮罩裁掉
-- 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色
+- 源文件：`resources/`（`icon.svg` 圆角底、`icon-square.svg`、`icon-round.svg`、`logo.svg` 透明底、`icon-monochrome.svg` 单色剪影、`icon-bw.svg` 黑白稿）
 - 配色：黑 `#000000`、暗金 `#B8860B`、白 `#FFFFFF`
-- 应用内：侧边栏品牌区、启动加载页、设置「关于」卡片共用 `public/brand-icon.svg`（由 `logo.py` 随 SVG 一起同步，favicon 同源）
+- 生成链路：`python scripts/logo.py` 输出 SVG 与 Android 矢量层，`node scripts/render_icons.mjs` 光栅化为各密度 PNG 与 iOS 图标
+- Android 自适应图标：108dp 画布，纯白背景 + 矢量前景，图形控制在中心 66dp 安全区内；Android 13+ 支持 Monet 主题图标自动染色
 
-## 1.0 变更（stable）
+## 版本历史
 
-- 从开发版 Dev0.4.2202 复制建立稳定版基线：包名 `pascal.thebell.std`、软件名 TheBell、versionName 1.0（versionCode 2，与开发版并存）
-- 稳定版沿用蓝黄品牌（`#2563EB` / `#FBBF24`），与开发版的黑金品牌通过构建变体区分
-- 纳入单仓库双基线架构：构建变体与业务代码与 dev 分支完全同源
+### 1.0（stable）
 
-## Dev0.4.2204 变更
+- 从开发版 Dev0.4.2202 建立稳定版基线：独立包名 `pascal.thebell.std`，与开发版并存安装
+- 沿用蓝黄品牌（`#2563EB` / `#FBBF24`），与开发版的黑金品牌通过构建变体区分
 
-- **仓库架构重组**：原开发版（`D:/TheBell`）与稳定版（`D:/TheBell_Stable`）两个仓库合并为单仓库双基线（`dev` / `main`），原目录保留为迁移前备份
-- **构建变体**：新增 Product Flavors——`dev`（`pascal.thebell` / TheBell Beta / 黑金图标）与 `stable`（`pascal.thebell.std` / TheBell / 蓝黄图标）；启动图标与应用内品牌图按变体出自 `src/{dev,stable}/` 资源目录
-- **业务代码去标识化**：软件名与版本号改由 `DeviceInfoPlugin` 运行时注入、前端动态显示，dev / main 分支业务代码零差异，合并不再产生标识类冲突
-- 图标渲染脚本按变体输出；版本 Dev0.4.2204（dev flavor / versionCode 9），stable flavor 1.0（versionCode 2）
+### 共同开发历史（以下版本号为 dev 分支计法）
 
-## 历史变更（继承自共同开发历史）
+### Dev0.4.2204（dev）
 
-## Dev0.4.2203 变更
+- 仓库重组为单仓库双基线（`dev` / `main`），引入 Product Flavors 构建变体
+- 软件名与版本号改由 `DeviceInfoPlugin` 运行时注入，业务代码不含构建标识
 
-- 品牌：LOGO 蓝色圆环 / 猫耳 / 指针 / 猫尾全部改为黑色，中心轴心改为暗金色（`#000000` / `#B8860B`），应用图标、Web 角标、favicon、Android 矢量层与多密度 PNG、iOS 图标同步重生成
-- 名称体系：项目名 `TheBell_Dev`（本仓库为 TheBell 开发版主线），软件名改为 **TheBell Beta**（桌面名称、应用内品牌、窗口标题、备份分享标题），包名保持 `pascal.thebell`
-- 版本 Dev0.4.2203（versionCode 8）
+### Dev0.4.2203（dev）
 
-## Dev0.4.2202 变更
+- 品牌：LOGO 蓝色全部改为黑色，中心轴心改为暗金色，全量重生成图标资源
+- 名称体系：开发版软件名调整为 TheBell Beta
 
-- 设置「关于」的平台一行改为运行时获取：显示真实 Android 版本与小米 HyperOS / MIUI 大版本（原生 `DeviceInfo` 插件读取系统属性，无需权限，网页端降级为 User-Agent 解析）
-- 学习任务新增顺延模式设置（默认自动顺延）：自动 = 之前未完成任务自动出现在今天；手动 = 任务留在原定日期，切换到那一天后自行顺延
-- 首页「继承任务」区支持点击折叠 / 展开
-- 今日节奏支持收起已勾选完成的项，一键展开
-- 设置页新增「学习任务」卡片；版本 Dev0.4.2202（versionCode 7）
+### Dev0.4.2202（dev）
 
-## Dev0.4 变更
+- 设置页平台信息改为运行时获取（Android 版本 + HyperOS / MIUI）
+- 学习任务新增顺延模式设置（自动 / 手动）；继承任务可折叠；今日节奏支持收起已完成项
 
-- 新 logo：猫耳时钟，蓝色圆环 / 黄色轴心 / 5 点分针延伸成猫尾 / 带弧度的猫耳
-- Android 自适应图标改为矢量双层：白色背景 + 前景矢量，并新增 monochrome 层支持主题图标
-- 旧版方形 / 圆形 / 自适应 PNG、iOS 图标、favicon、启动图全部换用新 logo
-- 清理 Capacitor 模板遗留的 `drawable-v24/ic_launcher_foreground.xml`（会覆盖新前景）
-- 版本升级 Dev0.4（versionCode 4）
+### Dev0.4（dev）
 
-## Dev0.3 变更
+- 全新猫耳时钟 logo 与矢量自适应图标（含 Monet 主题图标）
 
-- 自绘时间选择器：时 / 分双滚轮 + 大号预览 + 「使用当前时间」，替换系统时间弹窗
-- 首页卡片拆成独立组件，支持显示/隐藏、整行/左栏/右栏、栏内上下排序
-- 默认布局：左栏「分段倒计时 + 学习任务」，右栏「今日节奏」，倒计时卡与任务卡等宽
-- 倒数日主卡支持 6 套渐变背景，并可选展示哪个倒数日
-- 新增「独立计时器」「倒数日清单」两张可选卡片，自由勾选要展示的条目
-- 首页布局存于 SQLite `meta.home_layout`，并写入 JSON 备份（按索引保存选择）
+### Dev0.3（dev）
 
-## Dev0.2 变更
+- 自绘时间选择器；首页卡片组件化，支持布局自定义；倒数日主卡六套渐变背景
 
-- 今日节奏改为纵向时间线：左侧起止时间、右侧内容，按开始时间排列，跨日的时间段也能正确排序
-- 取消「每段一张计时卡」，改为学习任务上方一张倒计时卡：左右箭头切换时段，或直接点时间线选中
-- 修复：修改起止时间后倒计时仍停留在旧时长；现在时长由区间推导，改完立即重置
-- 时间段编辑改用原生时间选择器（`input[type=time]`），并保留手输规整（830 → 08:30）
-- 新增 10 / 25 / 30 / 50 分钟快捷时长，一键把结束时间设为开始 + N 分钟
-- SQLite 新增 `routine.start_min / end_min`，旧数据自动解析迁移；JSON 备份新增 `start` / `end`
+### Dev0.2（dev）
 
-## Dev0.4 已知边界
+- 今日节奏改为纵向时间线；倒计时时长由起止时间推导；新增快捷时长
 
-- 单计划模型（不做多计划切换 / 账号同步 / 云备份）
-- 暂无通知提醒、桌面小组件、后台常驻计时（切后台后按时间戳继续，但不会发系统通知）
-- iOS 工程已生成但未在 macOS 上编译验证
+## 已知边界
+
+- 单计划模型：暂不支持多计划切换、账号同步与云备份
+- 暂无通知提醒、桌面小组件与后台常驻计时（切后台后按时间戳继续，不发系统通知）
+- iOS 工程已生成，尚未在 macOS 上完成编译与签名验证
+
+## 许可
+
+本项目暂未设置开源许可证，代码与品牌资源版权归项目作者所有。
