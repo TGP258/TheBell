@@ -79,6 +79,16 @@ async function removeRoutine(item: RoutineItem): Promise<void> {
     </div>
 
     <div v-if="day" class="routine-body">
+      <button
+        v-if="doneCount && !manageRoutine"
+        class="done-fold"
+        :class="{ open: !doneFolded }"
+        @click="doneFolded = !doneFolded"
+      >
+        <component :is="doneFolded ? ChevronRight : ChevronDown" :size="13" />
+        {{ doneFolded ? '展开' : '收起' }}已完成 {{ doneCount }} 项
+      </button>
+
       <div v-if="store.timeline.length" class="timeline">
         <article
           v-for="item in visibleTimeline"
@@ -144,16 +154,6 @@ async function removeRoutine(item: RoutineItem): Promise<void> {
           </div>
         </article>
       </div>
-
-      <button
-        v-if="doneCount && !manageRoutine"
-        class="done-fold"
-        :class="{ open: !doneFolded }"
-        @click="doneFolded = !doneFolded"
-      >
-        <component :is="doneFolded ? ChevronRight : ChevronDown" :size="13" />
-        {{ doneFolded ? '展开' : '收起' }}已完成 {{ doneCount }} 项
-      </button>
 
       <div v-if="!store.timeline.length" class="empty">
         <span class="empty-icon"><Clock3 :size="24" /></span>
@@ -434,7 +434,7 @@ html[data-theme="dark"] .tl-item.break .tl-kind {
   justify-content: center;
   gap: 5px;
   width: 100%;
-  margin-top: 4px;
+  margin: 2px 0 8px;
   padding: 8px 0;
   border-radius: 10px;
   font-size: 11.5px;

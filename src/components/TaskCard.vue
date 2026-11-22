@@ -152,6 +152,7 @@ function openPostpone(task: Task): void {
         <button class="group-head fold" @click="inheritedOpen = !inheritedOpen">
           <span class="group-dot inherit" />
           <span class="group-name">继承任务</span>
+          <span class="fold-hint">{{ inheritedOpen ? '（点击折叠）' : '（点击展开）' }}</span>
           <span class="group-count num">{{ inherited.length }}</span>
           <ChevronDown :size="14" class="fold-icon" :class="{ open: inheritedOpen }" />
         </button>
@@ -349,6 +350,11 @@ function openPostpone(task: Task): void {
 }
 .group-head.fold:hover {
   background: var(--surface-2);
+}
+.fold-hint {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--faint);
 }
 .fold-icon {
   flex: none;
