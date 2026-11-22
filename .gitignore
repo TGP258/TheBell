@@ -35,3 +35,6 @@ _*.log
 
 # 本地临时验证
 _verify/
+
+# Agent 本地交接文档（不入库）
+AGENTS.md
