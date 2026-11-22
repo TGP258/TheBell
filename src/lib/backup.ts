@@ -43,13 +43,23 @@ function isRoutineKind(value: unknown): value is RoutineKind {
 }
 
 function inferRoutine(title: string): { kind: RoutineKind; durationSec: number } {
-  if (/作息|睡觉|起床|洗漱|早饭|午饭|晚饭|早餐|午餐|晚餐/.test(title)) {
+  // 起居：只打卡，不计时
+  if (/作息|睡觉|起床|洗漱|早饭|早餐|午饭|午餐|晚饭|晚餐|通勤|洗澡/.test(title)) {
     return { kind: 'routine', durationSec: 0 };
   }
-  if (/休息|放松|散步/.test(title)) return { kind: 'break', durationSec: 600 };
-  if (/学习|上课|刷题|背诵|复习|专注|自习/.test(title)) {
+  // 休息：短休、午休、运动
+  if (/休息|午休|小憩|短休|散步|运动|拉伸|茶歇|咖啡/.test(title)) {
+    return { kind: 'break', durationSec: 600 };
+  }
+  // 学习：旧版标题里通常直接写科目或任务
+  if (
+    /学习|上课|刷题|背诵|复习|专注|自习|单词|数学|英语|政治|408|专业课|真题|套卷|错题|笔记|听课|网课|阅读|作文|复盘|订正|翻译|语法/.test(
+      title
+    )
+  ) {
     return { kind: 'study', durationSec: 3000 };
   }
+  // 其余保持起居，避免旧数据被误判成计时段
   return { kind: 'routine', durationSec: 0 };
 }
 
@@ -158,12 +168,22 @@ export function normalizeBackup(raw: unknown): {
 } {
   const root = asRecord(raw);
   if (!root) throw new Error('备份内容为空或格式不正确');
-  if (root.format !== 'thebell/v1' && root.app !== 'pascal.thebell') {
-    throw new Error('这不是「TheBell」的计划备份文件');
-  }
 
   const planRaw = asRecord(root.plan);
-  if (!planRaw) throw new Error('备份缺少 plan 字段');
+  if (!planRaw) throw new Error('备份里没有 plan 信息，无法识别');
+
+  // 兼容：TheBell（thebell/v1 / pascal.thebell）与旧版百日冲刺（studyplan/v1 / pascal.studyplan）
+  const format = text(root.format);
+  const app = text(root.app);
+  const known =
+    format === 'thebell/v1' ||
+    format === 'studyplan/v1' ||
+    app === 'pascal.thebell' ||
+    app === 'pascal.studyplan';
+  const hasBody = Array.isArray(root.days) || Array.isArray(root.routine);
+  if (!known && !hasBody) {
+    throw new Error('无法识别这个备份文件：支持 TheBell 与旧版「百日冲刺」导出的 JSON');
+  }
 
   const name = text(planRaw.name) || '导入的计划';
   const startDate = isDateStr(planRaw.startDate) ? planRaw.startDate : todayStr();
