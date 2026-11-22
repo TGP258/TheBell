@@ -13,12 +13,14 @@ import {
 import { usePlanStore } from './stores/plan';
 import { fullDateCN, relativeLabel } from './lib/date';
 import { toast } from './lib/toast';
+import { setupLiveSync } from './lib/live-sync';
 import TodayView from './views/TodayView.vue';
 import PlanView from './views/PlanView.vue';
 import TimerView from './views/TimerView.vue';
 import CountdownView from './views/CountdownView.vue';
 import SettingsView from './views/SettingsView.vue';
 import ToastHost from './components/ToastHost.vue';
+import SegmentEndOverlay from './components/SegmentEndOverlay.vue';
 
 type Tab = 'today' | 'plan' | 'timer' | 'countdown' | 'settings';
 
@@ -74,6 +76,7 @@ function go(next: Tab): void {
 onMounted(async () => {
   await store.init();
   if (store.loadError) toast(store.loadError, 'info');
+  setupLiveSync(store);
 
   if (Capacitor.isNativePlatform()) {
     CapApp.addListener('backButton', () => {
@@ -98,7 +101,7 @@ onMounted(async () => {
         <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
           <b>TheBell</b>
-          <span>学习时钟 · Dev0.4</span>
+          <span>学习时钟 · Dev0.4.1</span>
         </div>
       </div>
 
@@ -161,6 +164,7 @@ onMounted(async () => {
     </nav>
 
     <ToastHost />
+    <SegmentEndOverlay />
   </div>
 </template>
 

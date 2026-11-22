@@ -289,6 +289,12 @@ export class NativeDriver implements StorageDriver {
     const homeRows = await this.query<MetaRow>(
       "SELECT value FROM meta WHERE key = 'home_layout'"
     );
+    const alertRows = await this.query<MetaRow>(
+      "SELECT value FROM meta WHERE key = 'alert_on_end'"
+    );
+    const liveRows = await this.query<MetaRow>(
+      "SELECT value FROM meta WHERE key = 'live_notification'"
+    );
 
     const tasksByDay = new Map<number, Task[]>();
     for (const row of taskRows) {
@@ -413,6 +419,8 @@ export class NativeDriver implements StorageDriver {
       countdowns,
       home,
       theme,
+      alertOnEnd: alertRows[0]?.value !== '0',
+      liveNotification: liveRows[0]?.value !== '0',
     };
   }
 
@@ -553,6 +561,20 @@ export class NativeDriver implements StorageDriver {
     ]);
   }
 
+  async setAlertOnEnd(on: boolean): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
+      'alert_on_end',
+      on ? '1' : '0',
+    ]);
+  }
+
+  async setLiveNotification(on: boolean): Promise<void> {
+    await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
+      'live_notification',
+      on ? '1' : '0',
+    ]);
+  }
+
   async setHome(layout: HomeLayout): Promise<void> {
     await this.run('INSERT OR REPLACE INTO meta(key, value) VALUES(?, ?)', [
       'home_layout',
@@ -583,6 +605,14 @@ export class NativeDriver implements StorageDriver {
       {
         sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
         args: ['home_layout', JSON.stringify(data.home)],
+      },
+      {
+        sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
+        args: ['alert_on_end', data.alertOnEnd ? '1' : '0'],
+      },
+      {
+        sql: 'INSERT INTO meta(key, value) VALUES(?, ?)',
+        args: ['live_notification', data.liveNotification ? '1' : '0'],
       },
     ];
 

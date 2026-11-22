@@ -114,6 +114,10 @@ export interface AppData {
   countdowns: Countdown[];
   home: HomeLayout;
   theme: ThemeMode;
+  /** 分段倒计时结束时是否全屏提示 */
+  alertOnEnd: boolean;
+  /** 是否在系统通知栏发布实时倒计时（Live Updates / Now Bar） */
+  liveNotification: boolean;
 }
 
 export interface DayProgress {
@@ -185,7 +189,7 @@ export interface BackupFile {
   customTimers?: BackupCustomTimer[];
   segmentTimers?: BackupSegmentTimer[];
   home?: BackupHome;
-  settings?: { theme?: ThemeMode };
+  settings?: { theme?: ThemeMode; alertOnEnd?: boolean; liveNotification?: boolean };
 }
 
 export interface BackupSummary {

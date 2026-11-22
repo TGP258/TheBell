@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 通知栏小图标：系统只保留 alpha 通道，使用纯白单色 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2 C6.48,2 2,6.48 2,12 C2,17.52 6.48,22 12,22 C17.52,22 22,17.52 22,12 C22,6.48 17.52,2 12,2 Z M12,19.8 C7.69,19.8 4.2,16.31 4.2,12 C4.2,7.69 7.69,4.2 12,4.2 C16.31,4.2 19.8,7.69 19.8,12 C19.8,16.31 16.31,19.8 12,19.8 Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11,6.4 h2 v5.9 l3.9,2.5 -1.05,1.65 -4.85,-3.15 z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M13.4,12 C13.4,12.77 12.77,13.4 12,13.4 C11.23,13.4 10.6,12.77 10.6,12 C10.6,11.23 11.23,10.6 12,10.6 C12.77,10.6 13.4,11.23 13.4,12 Z" />
+</vector>

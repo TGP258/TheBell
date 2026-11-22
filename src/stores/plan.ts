@@ -64,6 +64,14 @@ export const usePlanStore = defineStore('plan', () => {
     timeline.value.filter((item) => item.kind !== 'routine' && item.durationSec > 0)
   );
   const activeSegmentId = ref<number | null>(null);
+  const alertOnEnd = computed(() => data.value.alertOnEnd !== false);
+  const liveNotification = computed(() => data.value.liveNotification !== false);
+  const segmentEndEvent = ref<{
+    dayIdx: number;
+    routineId: number;
+    title: string;
+    at: number;
+  } | null>(null);
   const activeSegment = computed<RoutineItem | null>(() => {
     const list = timerSegments.value;
     if (!list.length) return null;
@@ -242,6 +250,10 @@ export const usePlanStore = defineStore('plan', () => {
     return Math.max(0, state.remainingSec);
   }
 
+  function segmentEndsAt(dayIdx: number, routineId: number): number | null {
+    return segmentState(dayIdx, routineId)?.endsAt ?? null;
+  }
+
   function segmentRunning(dayIdx: number, routineId: number): boolean {
     const state = segmentState(dayIdx, routineId);
     return Boolean(state?.endsAt && state.endsAt > nowMs.value);
@@ -329,7 +341,7 @@ export const usePlanStore = defineStore('plan', () => {
   function expireTimers(): void {
     if (!driver) return;
     const now = Date.now();
-    let segmentExpired = false;
+    let ended: { dayIdx: number; routineId: number } | null = null;
 
     for (const [key, state] of Object.entries(data.value.segmentTimers)) {
       if (!state.endsAt || state.endsAt > now) continue;
@@ -338,11 +350,22 @@ export const usePlanStore = defineStore('plan', () => {
       const [dayIdx, routineId] = key.split(':').map(Number);
       if (dayIdx && routineId) {
         void driver.upsertSegmentTimer(dayIdx, routineId, { ...state });
-        if (dayIdx === currentDayIdx.value) segmentExpired = true;
+        if (dayIdx === currentDayIdx.value && !ended) ended = { dayIdx, routineId };
       }
     }
 
-    if (segmentExpired) toast('一个学习时段结束了，起来活动一下', 'info');
+    if (ended) {
+      toast('一个学习时段结束了，起来活动一下', 'info');
+      if (alertOnEnd.value) {
+        const item = findRoutine(ended.routineId);
+        segmentEndEvent.value = {
+          dayIdx: ended.dayIdx,
+          routineId: ended.routineId,
+          title: item?.title ?? '本段倒计时',
+          at: Date.now(),
+        };
+      }
+    }
 
     for (const timer of data.value.customTimers) {
       if (!timer.endsAt || timer.endsAt > now) continue;
@@ -544,6 +567,52 @@ export const usePlanStore = defineStore('plan', () => {
     }
     data.value.segmentTimers[key] = next;
     await requireDriver().upsertSegmentTimer(dayIdx, routineId, next);
+  }
+
+  function nextTimerSegmentAfter(routineId: number): RoutineItem | null {
+    const list = timerSegments.value;
+    const index = list.findIndex((item) => item.id === routineId);
+    return index >= 0 && index + 1 < list.length ? list[index + 1] : null;
+  }
+
+  /** 直接开始某一段：已暂停的接着走，没开始过的从头计时 */
+  async function startSegment(dayIdx: number, routineId: number): Promise<void> {
+    const item = findRoutine(routineId);
+    if (!item || item.kind === 'routine' || item.durationSec <= 0) return;
+    activeSegmentId.value = routineId;
+    const key = `${dayIdx}:${routineId}`;
+    const state = data.value.segmentTimers[key];
+    if (state?.endsAt && state.endsAt > Date.now()) return;
+    if (!state || state.remainingSec <= 0) {
+      const fresh: TimerState = { remainingSec: item.durationSec, endsAt: null };
+      data.value.segmentTimers[key] = fresh;
+      await requireDriver().upsertSegmentTimer(dayIdx, routineId, fresh);
+    }
+    await toggleSegment(dayIdx, routineId);
+  }
+
+  async function continueToNextSegment(): Promise<boolean> {
+    const event = segmentEndEvent.value;
+    if (!event) return false;
+    const next = nextTimerSegmentAfter(event.routineId);
+    segmentEndEvent.value = null;
+    if (!next) return false;
+    await startSegment(event.dayIdx, next.id);
+    return true;
+  }
+
+  function dismissSegmentEnd(): void {
+    segmentEndEvent.value = null;
+  }
+
+  async function setAlertOnEnd(on: boolean): Promise<void> {
+    data.value.alertOnEnd = on;
+    await requireDriver().setAlertOnEnd(on);
+  }
+
+  async function setLiveNotification(on: boolean): Promise<void> {
+    data.value.liveNotification = on;
+    await requireDriver().setLiveNotification(on);
   }
 
   async function resetSegment(dayIdx: number, routineId: number): Promise<void> {
@@ -793,8 +862,18 @@ export const usePlanStore = defineStore('plan', () => {
     daysUntil,
     segmentState,
     segmentRemaining,
+    segmentEndsAt,
     segmentRunning,
     segmentProgress,
+    segmentEndEvent,
+    alertOnEnd,
+    liveNotification,
+    nextTimerSegmentAfter,
+    startSegment,
+    continueToNextSegment,
+    dismissSegmentEnd,
+    setAlertOnEnd,
+    setLiveNotification,
     customRemaining,
     customRunning,
     customProgress,

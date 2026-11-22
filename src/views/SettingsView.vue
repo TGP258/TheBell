@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import {
+  BellRing,
   Check,
   ChevronRight,
   Database,
   Download,
+  Maximize2,
   Monitor,
   Moon,
   RotateCcw,
+  ShieldCheck,
   Sun,
   Upload,
 } from 'lucide-vue-next';
@@ -20,8 +23,28 @@ import { fullDateCN } from '../lib/date';
 import { usePlanStore } from '../stores/plan';
 import { toast } from '../lib/toast';
 import AppModal from '../components/AppModal.vue';
+import { liveStatus, openLiveSettings, refreshLiveStatus, requestLivePermission } from '../lib/live-sync';
+import { liveSupported } from '../lib/live';
 
 const store = usePlanStore();
+
+onMounted(() => {
+  void refreshLiveStatus();
+});
+
+const permissionText = computed(() => {
+  if (!liveSupported) return '仅 Android 端提供系统通知，网页预览下不生效';
+  if (!liveStatus.value.checked) return '正在检查通知权限…';
+  if (!liveStatus.value.enabled) return '系统通知开关已关闭，请在系统设置里为 TheBell 打开通知';
+  if (!liveStatus.value.granted) return '尚未授予通知权限，授权后才会发布实时倒计时';
+  if (!liveStatus.value.canScheduleExact) return '通知已开启；精确提醒未授权，后台结束提醒可能略有延迟';
+  return '通知与精确提醒均已开启';
+});
+
+async function grantPermission(): Promise<void> {
+  await requestLivePermission();
+  if (!liveStatus.value.enabled) await openLiveSettings();
+}
 
 const planName = ref('');
 const planStart = ref('');
@@ -303,6 +326,71 @@ function resetAll(): void {
         />
       </section>
 
+      <section class="card set-card span-2">
+        <div class="set-head">
+          <h3>专注提醒</h3>
+          <p>系统实时通知与结束时的全屏提示，可分别常态关闭</p>
+        </div>
+        <div class="set-body rows">
+          <div class="toggle-row">
+            <span class="ra-icon"><BellRing :size="18" /></span>
+            <span class="ra-text">
+              <b>实时通知</b>
+              <p>
+                在通知栏、锁屏与状态栏显示剩余时间和进度，可直接暂停 / 继续 / 开始下一段；
+                适配 Android 16 实时动态（Live Updates）与三星 One UI 实时窗，小米灵动胶囊取决于系统白名单
+              </p>
+            </span>
+            <button
+              class="switch"
+              :class="{ on: store.liveNotification }"
+              role="switch"
+              :aria-checked="store.liveNotification"
+              aria-label="实时通知"
+              @click="store.setLiveNotification(!store.liveNotification)"
+            >
+              <span />
+            </button>
+          </div>
+
+          <div class="toggle-row">
+            <span class="ra-icon"><Maximize2 :size="18" /></span>
+            <span class="ra-text">
+              <b>结束后全屏提示</b>
+              <p>
+                一段倒计时结束时用整屏白 / 黑覆盖提示；点「开始下一段」直接接着计时。
+                关闭后只在应用内轻提示，不打断当前操作
+              </p>
+            </span>
+            <button
+              class="switch"
+              :class="{ on: store.alertOnEnd }"
+              role="switch"
+              :aria-checked="store.alertOnEnd"
+              aria-label="结束后全屏提示"
+              @click="store.setAlertOnEnd(!store.alertOnEnd)"
+            >
+              <span />
+            </button>
+          </div>
+
+          <div class="toggle-row perm-row">
+            <span class="ra-icon"><ShieldCheck :size="18" /></span>
+            <span class="ra-text">
+              <b>通知权限</b>
+              <p>{{ permissionText }}</p>
+            </span>
+            <button v-if="liveSupported && !liveStatus.granted" class="btn primary sm" @click="grantPermission">
+              授予权限
+            </button>
+            <button v-else-if="liveSupported" class="btn ghost sm" @click="openLiveSettings">
+              通知设置
+            </button>
+            <span v-else class="perm-unavailable">Android 专属</span>
+          </div>
+        </div>
+      </section>
+
       <section class="card set-card">
         <div class="set-head">
           <h3>存储</h3>
@@ -337,7 +425,7 @@ function resetAll(): void {
               <b>TheBell</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">Dev0.4</span>
+            <span class="version-tag">Dev0.4.1</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>
@@ -539,6 +627,53 @@ function resetAll(): void {
 .ra-arrow {
   color: var(--faint);
   flex: none;
+}
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--border);
+}
+.toggle-row:last-of-type {
+  border-bottom: none;
+}
+.switch {
+  position: relative;
+  flex: none;
+  width: 42px;
+  height: 24px;
+  border-radius: 99px;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.switch span {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.switch.on {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+.switch.on span {
+  transform: translateX(18px);
+}
+.perm-row .btn.sm {
+  flex: none;
+  white-space: nowrap;
+}
+.perm-unavailable {
+  flex: none;
+  font-size: 11px;
+  color: var(--faint);
 }
 .hidden-file {
   display: none;
