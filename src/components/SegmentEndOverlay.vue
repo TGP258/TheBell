@@ -71,7 +71,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown));
           </div>
 
           <p v-if="!next" class="seg-hint">今天已经没有可计时的分段了。</p>
-          <p v-else class="seg-hint">可在「设置 → 专注提醒」里关闭结束后全屏提示</p>
+          <p v-else class="seg-hint">可在设置中关闭此提示</p>
         </div>
       </div>
     </Transition>

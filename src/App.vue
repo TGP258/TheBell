@@ -13,7 +13,6 @@ import {
 import { usePlanStore } from './stores/plan';
 import { fullDateCN, relativeLabel } from './lib/date';
 import { toast } from './lib/toast';
-import { setupLiveSync } from './lib/live-sync';
 import TodayView from './views/TodayView.vue';
 import PlanView from './views/PlanView.vue';
 import TimerView from './views/TimerView.vue';
@@ -76,7 +75,6 @@ function go(next: Tab): void {
 onMounted(async () => {
   await store.init();
   if (store.loadError) toast(store.loadError, 'info');
-  setupLiveSync(store);
 
   if (Capacitor.isNativePlatform()) {
     CapApp.addListener('backButton', () => {

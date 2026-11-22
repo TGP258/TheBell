@@ -31,7 +31,6 @@ export interface StorageDriver {
   deleteCountdown(id: number): Promise<void>;
   setTheme(theme: ThemeMode): Promise<void>;
   setAlertOnEnd(on: boolean): Promise<void>;
-  setLiveNotification(on: boolean): Promise<void>;
   setHome(layout: HomeLayout): Promise<void>;
   replaceAll(data: AppData): Promise<void>;
 }

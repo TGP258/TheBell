@@ -2,7 +2,7 @@
 
 面向长期备考场景的 **50/10 专注计时、学习计划与倒数日** 应用。以「50 分钟学习 + 10 分钟休息」为默认节奏，把每天的作息、任务、打卡与倒数目标收进一个离线可用的界面。
 
-- Android：原生 APK（Capacitor 7 + 原生 SQLite），支持系统级实时通知
+- Android：原生 APK（Capacitor 7 + 原生 SQLite）
 - iPadOS：同一套 Web 代码，仓库内已生成 `ios/App` 工程，需在 macOS 上用 Xcode 构建
 - 平板：宽屏使用左侧导航 + 双栏布局；手机使用底部导航
 - 数据：全部保存在本地，不联网、不上传、无账号体系
@@ -14,7 +14,6 @@
 ## 目录
 
 - [功能](#功能)
-- [实时通知与系统兼容性](#实时通知与系统兼容性)
 - [技术架构](#技术架构)
 - [快速开始](#快速开始)
 - [项目结构](#项目结构)
@@ -56,25 +55,6 @@
 
 ---
 
-## 实时通知与系统兼容性
-
-运行中的分段倒计时会以**常驻通知**的形式发布到系统通知栏，包含剩余时间、进度、作息区间与快捷操作（暂停 / 继续 / 开始下一段）。通知使用系统 `Chronometer` 与绝对结束时间戳驱动，因此应用切后台、被冻结甚至被杀进程后，状态栏倒计时仍然准确，无需常驻前台服务。
-
-结束提醒由 `AlarmManager` 在结束时刻触发：即使 WebView 已停止，也会发出高优先级通知并尝试以全屏 Intent 唤醒应用；回到应用后会显示全屏覆盖层，可直接进入下一段。
-
-| 系统界面 | 支持方式 | 说明 |
-| --- | --- | --- |
-| Android 16 QPR1+ Live Updates | `POST_PROMOTED_NOTIFICATIONS` + `android.requestPromotedOngoing` + 合规的 `ProgressStyle` / `BigTextStyle` | 状态栏胶囊、锁屏卡片、AOD；是否提升由系统与用户的「实时动态」开关决定 |
-| 三星 One UI 8+ 实时窗（Now Bar） | 承接标准 Android Live Updates | 同一条平台合规通知即可被 Now Bar 摄入 |
-| 小米 HyperOS / MIUI 灵动胶囊 | 标准常驻通知 + OEM 扩展元数据 | 焦点通知对第三方应用存在系统白名单限制，是否以胶囊形态呈现由 ROM 决定 |
-| Android 8–15 / 其他 ROM | 标准常驻通知 | 通知栏常驻、锁屏可见，带倒计时与快捷操作 |
-
-实时通知与结束时的全屏提示是两个独立开关，位于「设置 → 专注提醒」，均可常态关闭。Android 13+ 需要运行时通知权限；若系统通知开关被关闭，设置页提供直达系统设置页的入口。
-
-> 精确闹钟（`SCHEDULE_EXACT_ALARMS` / `USE_EXACT_ALARM`）用于保证后台结束提醒准时。若用户或系统撤销该能力，插件会退化为非精确闹钟，提醒可能延后，应用内的全屏提示不受影响。
-
----
-
 ## 技术架构
 
 | 层 | 选型 |
@@ -82,11 +62,10 @@
 | UI | Vue 3 + TypeScript + Vite，Pinia 状态管理，手写设计系统 |
 | 跨平台 | Capacitor 7（Android 真机验证，iOS 工程已生成） |
 | 本地存储 | Android 原生 SQLite（自定义 `PascalDb` Capacitor 插件）；浏览器 `localStorage` |
-| 实时通知 | 自定义 `SegmentLive` Android 插件（`Notification.Builder` + `Chronometer` + `AlarmManager`） |
 | 备份 | JSON `thebell/v1` |
 | 资源生成 | Python（SVG / Android 矢量层）、Node + 无头 Chrome（多密度 PNG） |
 
-业务状态全部保存在 TypeScript 层，原生插件只负责 SQL 执行与系统通知，便于跨平台迁移与备份格式演进。计时状态只存「剩余秒数 + 结束时间戳」：运行时由 `ends_at` 推算，不每秒写库；暂停时换算回 `remaining_sec`。
+业务状态全部保存在 TypeScript 层，原生插件只负责 SQL 执行，便于跨平台迁移与备份格式演进。计时状态只存「剩余秒数 + 结束时间戳」：运行时由 `ends_at` 推算，不每秒写库；暂停时换算回 `remaining_sec`。
 
 平板宽屏适配使用 CSS 容器查询，同一套组件在手机与平板上分别采用底部导航与左侧导航布局，无独立分支。
 
@@ -145,14 +124,10 @@ src/
     backup.ts           JSON 构建、校验与恢复（含旧版兼容）
     seed.ts             默认 100 天计划 + 50/10 作息模板
     segment.ts          时间段换算与格式化
-    live.ts             SegmentLive Capacitor 插件的类型与 Web 空实现
-    live-sync.ts        Pinia 状态 → 系统通知的同步与动作回传
     date.ts             本地日期计算
   types.ts              领域模型与备份结构定义
 android/app/src/main/java/pascal/thebell/
-  PascalDbPlugin.java            SQLite 桥
-  SegmentLivePlugin.java         实时通知 / 结束提醒 / 权限
-  SegmentLiveReceiver.java       通知动作与闹钟广播接收
+  PascalDbPlugin.java   SQLite 桥
 ios/App/                         Xcode 工程
 resources/                      图标与 logo 源文件、申报图样
 scripts/
@@ -177,7 +152,7 @@ scripts/
 | `segment_timer(day_idx, routine_id, remaining_sec, ends_at)` | 学习 / 休息段的按天倒计时状态 |
 | `custom_timer(id, title, duration_sec, remaining_sec, ends_at, color, created_at)` | 独立计时器 |
 | `countdown(id, title, target_date, color, pinned)` | 倒数日 |
-| `meta(key, value)` | `theme`、`home_layout`、`alert_on_end`、`live_notification` |
+| `meta(key, value)` | `theme`、`home_layout`、`alert_on_end` |
 
 旧库中只有 `time_text` 时，首次启动会解析出 `start_min / end_min` 并回写。
 
@@ -217,7 +192,7 @@ scripts/
     "timerIndexes": [0],
     "countdownIndexes": [0]
   },
-  "settings": { "theme": "system", "alertOnEnd": true, "liveNotification": true }
+  "settings": { "theme": "system", "alertOnEnd": true }
 }
 ```
 
@@ -227,16 +202,7 @@ scripts/
 
 ## 权限说明
 
-| 权限 | 用途 |
-| --- | --- |
-| `POST_NOTIFICATIONS` | Android 13+ 发布实时通知与结束提醒（运行时申请） |
-| `POST_PROMOTED_NOTIFICATIONS` | Android 16 QPR1+ 请求将常驻通知提升为 Live Updates（非运行时权限） |
-| `SCHEDULE_EXACT_ALARMS` / `USE_EXACT_ALARM` | 在结束时刻准时唤醒提醒 |
-| `USE_FULL_SCREEN_INTENT` | 锁屏状态下以全屏 Intent 拉起结束提示 |
-| `VIBRATE` | 结束提醒的振动反馈 |
-| `INTERNET` | Capacitor WebView 基础权限；应用本身不发起网络请求 |
-
-所有权限仅用于本地计时与提醒，不用于数据采集或上报。
+应用仅声明 `INTERNET`（Capacitor WebView 的基础权限），不申请通知、定位、通讯录或外部存储权限，也不需要运行时授权。所有数据读写都在应用私有目录内完成，应用本身不发起网络请求。
 
 ---
 
@@ -258,7 +224,7 @@ scripts/
 
 | 版本 | 变更 |
 | --- | --- |
-| **Dev0.4.1** | 系统实时通知（Android 16 Live Updates / 三星实时窗 / MIUI 灵动胶囊元数据）、常驻倒计时与快捷操作、后台精确结束提醒、分段结束全屏覆盖层与「开始下一段」、实时通知与全屏提示独立开关、正式化项目文档 |
+| **Dev0.4.1** | 分段结束全屏覆盖层与「开始下一段」、结束提示开关（可常态关闭）、正式化项目文档 |
 | Dev0.4 | 猫耳时钟 logo、矢量双层自适应图标、Monet 主题图标、应用内品牌统一 |
 | Dev0.3 | 自绘时间选择器、首页卡片组件化与布局自定义、倒数日主卡渐变背景 |
 | Dev0.2 | 今日节奏时间线、单卡分段倒计时、起止时间驱动时长、作息字段迁移 |
@@ -269,6 +235,6 @@ scripts/
 ## 已知限制
 
 - 单计划模型，不提供多计划切换、账号同步与云备份
-- 实时通知的「胶囊 / 实时窗」形态由操作系统与 OEM 决定；部分 ROM 对第三方应用设有白名单，应用侧只能提供平台合规的标准常驻通知
+- 结束提示依赖应用处于前台或回到前台时触发，不提供系统通知或后台唤醒
 - 未实现桌面小组件、Wear OS 磁贴与 iOS Live Activities
 - iOS 工程已生成，尚未在 macOS 上完成编译与签名验证

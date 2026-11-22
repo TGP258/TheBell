@@ -101,7 +101,6 @@ export function emptyData(): AppData {
     home: defaultHome(),
     theme: 'system',
     alertOnEnd: true,
-    liveNotification: true,
   };
 }
 
@@ -165,6 +164,5 @@ export function createSeed(): AppData {
     home: defaultHome(),
     theme: 'system',
     alertOnEnd: true,
-    liveNotification: true,
   };
 }

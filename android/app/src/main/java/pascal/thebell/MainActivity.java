@@ -9,7 +9,6 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(PascalDbPlugin.class);
-        registerPlugin(SegmentLivePlugin.class);
         super.onCreate(savedInstanceState);
     }
 }

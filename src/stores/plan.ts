@@ -65,7 +65,6 @@ export const usePlanStore = defineStore('plan', () => {
   );
   const activeSegmentId = ref<number | null>(null);
   const alertOnEnd = computed(() => data.value.alertOnEnd !== false);
-  const liveNotification = computed(() => data.value.liveNotification !== false);
   const segmentEndEvent = ref<{
     dayIdx: number;
     routineId: number;
@@ -610,11 +609,6 @@ export const usePlanStore = defineStore('plan', () => {
     await requireDriver().setAlertOnEnd(on);
   }
 
-  async function setLiveNotification(on: boolean): Promise<void> {
-    data.value.liveNotification = on;
-    await requireDriver().setLiveNotification(on);
-  }
-
   async function resetSegment(dayIdx: number, routineId: number): Promise<void> {
     const item = findRoutine(routineId);
     if (!item || item.kind === 'routine' || item.durationSec <= 0) return;
@@ -867,13 +861,11 @@ export const usePlanStore = defineStore('plan', () => {
     segmentProgress,
     segmentEndEvent,
     alertOnEnd,
-    liveNotification,
     nextTimerSegmentAfter,
     startSegment,
     continueToNextSegment,
     dismissSegmentEnd,
     setAlertOnEnd,
-    setLiveNotification,
     customRemaining,
     customRunning,
     customProgress,

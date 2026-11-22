@@ -141,11 +141,7 @@ export function buildBackup(data: AppData): BackupFile {
         .map((id) => countdownIndex.get(id))
         .filter((index): index is number => index !== undefined),
     },
-    settings: {
-      theme: data.theme,
-      alertOnEnd: data.alertOnEnd,
-      liveNotification: data.liveNotification,
-    },
+    settings: { theme: data.theme, alertOnEnd: data.alertOnEnd },
   };
 }
 
@@ -382,7 +378,6 @@ export function normalizeBackup(raw: unknown): {
     home,
     theme,
     alertOnEnd: settings?.alertOnEnd !== false,
-    liveNotification: settings?.liveNotification !== false,
   };
 
   return {
