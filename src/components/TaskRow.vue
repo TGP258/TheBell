@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { Check, Pencil } from 'lucide-vue-next';
+import { CalendarClock, Check, Pencil } from 'lucide-vue-next';
 import type { Task } from '../types';
 import { CATEGORY_META } from '../lib/categories';
 
@@ -10,15 +10,21 @@ const props = withDefaults(
     editable?: boolean;
     showCategory?: boolean;
     dense?: boolean;
+    /** 继承任务的原日期标签，如「11/20」 */
+    badge?: string;
+    /** 是否提供顺延操作 */
+    postponable?: boolean;
   }>(),
   {
     editable: false,
     showCategory: false,
     dense: false,
+    badge: '',
+    postponable: false,
   }
 );
 
-defineEmits<{ toggle: []; edit: [] }>();
+defineEmits<{ toggle: []; edit: []; postpone: [] }>();
 
 const meta = computed(() => CATEGORY_META[props.task.category]);
 </script>
@@ -39,11 +45,22 @@ const meta = computed(() => CATEGORY_META[props.task.category]);
         {{ meta.name }}
       </span>
       <span class="task-title">{{ task.title }}</span>
+      <span v-if="badge && !task.done" class="task-badge num">继承 {{ badge }}</span>
+    </button>
+    <button
+      v-if="postponable && !task.done"
+      class="task-act"
+      aria-label="顺延任务"
+      title="顺延任务"
+      @click.stop="$emit('postpone')"
+    >
+      <CalendarClock :size="15" />
     </button>
     <button
       v-if="editable"
-      class="task-edit"
+      class="task-act"
       aria-label="编辑任务"
+      title="编辑任务"
       @click.stop="$emit('edit')"
     >
       <Pencil :size="15" />
@@ -137,7 +154,20 @@ const meta = computed(() => CATEGORY_META[props.task.category]);
   text-decoration: line-through;
   text-decoration-color: var(--faint);
 }
-.task-edit {
+.task-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-strong);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.task-act {
   flex: none;
   width: 30px;
   height: 30px;
@@ -148,15 +178,15 @@ const meta = computed(() => CATEGORY_META[props.task.category]);
   opacity: 0;
   transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.task:hover .task-edit {
+.task:hover .task-act {
   opacity: 1;
 }
-.task-edit:hover {
+.task-act:hover {
   background: var(--surface-3);
   color: var(--text);
 }
 @media (hover: none) {
-  .task-edit {
+  .task-act {
     opacity: 0.55;
   }
 }

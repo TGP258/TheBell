@@ -19,7 +19,6 @@ import TimerView from './views/TimerView.vue';
 import CountdownView from './views/CountdownView.vue';
 import SettingsView from './views/SettingsView.vue';
 import ToastHost from './components/ToastHost.vue';
-import SegmentEndOverlay from './components/SegmentEndOverlay.vue';
 
 type Tab = 'today' | 'plan' | 'timer' | 'countdown' | 'settings';
 
@@ -99,7 +98,7 @@ onMounted(async () => {
         <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
           <b>TheBell</b>
-          <span>学习时钟 · Dev0.4.1</span>
+          <span>学习时钟 · Dev0.4</span>
         </div>
       </div>
 
@@ -162,7 +161,6 @@ onMounted(async () => {
     </nav>
 
     <ToastHost />
-    <SegmentEndOverlay />
   </div>
 </template>
 

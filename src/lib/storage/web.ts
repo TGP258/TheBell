@@ -18,7 +18,6 @@ function hydrate(raw: unknown): AppData | null {
   data.countdowns = data.countdowns ?? [];
   data.home = normalizeHome(data.home);
   data.theme = data.theme ?? 'system';
-  data.alertOnEnd = data.alertOnEnd !== false;
   for (const item of data.routine) {
     item.kind = item.kind ?? 'routine';
     if (typeof item.startMin !== 'number' || typeof item.endMin !== 'number') {
@@ -132,10 +131,6 @@ export class WebDriver implements StorageDriver {
   }
 
   async setHome(): Promise<void> {
-    this.persist();
-  }
-
-  async setAlertOnEnd(): Promise<void> {
     this.persist();
   }
 

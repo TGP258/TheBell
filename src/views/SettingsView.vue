@@ -5,7 +5,6 @@ import {
   ChevronRight,
   Database,
   Download,
-  Maximize2,
   Monitor,
   Moon,
   RotateCcw,
@@ -304,32 +303,6 @@ function resetAll(): void {
         />
       </section>
 
-      <section class="card set-card span-2">
-        <div class="set-head">
-          <h3>专注提醒</h3>
-          <p>分段结束时的提示方式</p>
-        </div>
-        <div class="set-body rows">
-          <div class="toggle-row">
-            <span class="ra-icon"><Maximize2 :size="18" /></span>
-            <span class="ra-text">
-              <b>结束后全屏提示</b>
-              <p>本段结束时整屏提示，可直接开始下一段；关闭后只在应用内轻提示</p>
-            </span>
-            <button
-              class="switch"
-              :class="{ on: store.alertOnEnd }"
-              role="switch"
-              :aria-checked="store.alertOnEnd"
-              aria-label="结束后全屏提示"
-              @click="store.setAlertOnEnd(!store.alertOnEnd)"
-            >
-              <span />
-            </button>
-          </div>
-        </div>
-      </section>
-
       <section class="card set-card">
         <div class="set-head">
           <h3>存储</h3>
@@ -364,7 +337,7 @@ function resetAll(): void {
               <b>TheBell</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">Dev0.4.1</span>
+            <span class="version-tag">Dev0.4.2201</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>
@@ -566,44 +539,6 @@ function resetAll(): void {
 .ra-arrow {
   color: var(--faint);
   flex: none;
-}
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 2px;
-  border-bottom: 1px solid var(--border);
-}
-.toggle-row:last-of-type {
-  border-bottom: none;
-}
-.switch {
-  position: relative;
-  flex: none;
-  width: 42px;
-  height: 24px;
-  border-radius: 99px;
-  background: var(--surface-3);
-  border: 1px solid var(--border-strong);
-  transition: background 0.18s ease, border-color 0.18s ease;
-}
-.switch span {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.24);
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.switch.on {
-  background: var(--primary);
-  border-color: var(--primary);
-}
-.switch.on span {
-  transform: translateX(18px);
 }
 .hidden-file {
   display: none;
