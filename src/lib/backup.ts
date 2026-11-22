@@ -77,7 +77,7 @@ export function buildBackup(data: AppData): BackupFile {
   return {
     app: 'pascal.thebell',
     format: 'thebell/v1',
-    version: 'Dev0.4.2202',
+    version: 'Dev0.4.2203',
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
     routine: routine.map((item) => ({

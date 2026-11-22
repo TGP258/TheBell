@@ -95,7 +95,7 @@ async function exportPlan(): Promise<void> {
       });
       await Share.share({
         title: '导出计划',
-        text: 'TheBell计划备份',
+        text: 'TheBell Beta 计划备份',
         url: result.uri,
         dialogTitle: '保存或分享备份文件',
       });
@@ -376,10 +376,10 @@ function resetAll(): void {
           <div class="about-brand">
             <img class="about-logo" src="/brand-icon.svg" alt="TheBell" width="42" height="42" />
             <div>
-              <b>TheBell</b>
+              <b>TheBell Beta</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">Dev0.4.2202</span>
+            <span class="version-tag">Dev0.4.2203</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>

@@ -97,8 +97,8 @@ onMounted(async () => {
       <div class="brand">
         <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
-          <b>TheBell</b>
-          <span>学习时钟 · Dev0.4.2202</span>
+          <b>TheBell Beta</b>
+          <span>学习时钟 · Dev0.4.2203</span>
         </div>
       </div>
 
@@ -134,7 +134,7 @@ onMounted(async () => {
     <main class="main">
       <div v-if="!store.ready" class="boot">
         <img class="boot-mark" src="/brand-icon.svg" alt="" width="68" height="68" />
-        <b>TheBell</b>
+        <b>TheBell Beta</b>
         <span class="boot-spinner" />
         <p>正在准备你的计划…</p>
       </div>

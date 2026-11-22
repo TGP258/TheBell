@@ -2,8 +2,8 @@
 
 Draws a cat-eared clock:
 - white background
-- blue ring (clock face)
-- yellow centre pin
+- black ring (clock face)
+- dark-gold centre pin
 - minute hand pointing to 5 o'clock, continuing outside the ring as a tapered cat tail
 - two slightly curved triangular ears on top
 
@@ -28,8 +28,8 @@ C = (512.0, 512.0)
 RING_R = 276.0
 RING_W = 68.0
 EAR_TIP_R = 108.0
-BLUE = "#2563EB"
-YELLOW = "#FBBF24"
+BLUE = "#000000"
+YELLOW = "#B8860B"
 WHITE = "#FFFFFF"
 
 
