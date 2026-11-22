@@ -27,7 +27,7 @@ function fromUserAgent(): PlatformInfo {
     (/Macintosh/.test(ua) && (navigator.maxTouchPoints ?? 0) > 1);
   const android = /Android (\d+(?:\.\d+)*)/.exec(ua);
   if (android) {
-    return { name: `${iPad ? 'PadOS' : 'Android'} ${android[1]}` };
+    return { name: `Android ${android[1]}` };
   }
   const ios = /OS (\d+(?:_\d+)*) like Mac OS X/.exec(ua);
   if (ios) {
@@ -50,8 +50,7 @@ function uiLabel(value: string): string | undefined {
 export async function platformInfo(): Promise<PlatformInfo> {
   try {
     const raw = await DeviceInfo.info();
-    const base = `${raw.isTablet ? 'PadOS' : 'Android'} ${raw.osVersion}`;
-    return { name: base, ui: uiLabel(raw.uiVersion) };
+    return { name: `Android ${raw.osVersion}`, ui: uiLabel(raw.uiVersion) };
   } catch {
     return fromUserAgent();
   }
