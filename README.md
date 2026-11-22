@@ -1,6 +1,10 @@
 # TheBell
 
-一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.4.2202**。
+一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**1.0（稳定版）**。
+
+本仓库的 `main` 分支是 TheBell 的**稳定版基线**（软件名 TheBell，包名 `pascal.thebell.std`，独立计版）；开发变更在 `dev` 分支（TheBell_Dev / TheBell Beta）上集成，经真机验证后按发布节奏合并到本分支。
+
+本仓库是 TheBell 的**开发版主线**（项目名 `TheBell_Dev`），面向用户安装的软件名为 **TheBell Beta**；稳定版本在独立的稳定版分支仓库中整理发布，本仓库的变更经真机验证后再汇入。
 
 适用于考研、自学考试、语言考试、职业资格考试，以及任何需要长时间专注的场景。
 
@@ -24,7 +28,8 @@
 - **倒数日**：主倒数 + 多个目标日，支持颜色与置顶
 - **JSON 导入 / 导出**：包含计划、任务、作息起止时间、打卡状态、分段计时、独立计时器、倒数日、主题
 - **主题**：浅色 / 深色 / 跟随系统
-- **版本**：`versionName = Dev0.4.2202`，包名 `pascal.thebell`
+- **版本**：`versionName = 1.0`（stable 变体），软件名 TheBell，包名 `pascal.thebell.std`
+- **双基线**：本仓库 `dev` 分支为开发版基线，`main` 分支为稳定版基线（软件名 TheBell，包名 `pascal.thebell.std`）；包名 / 软件名 / 图标差异由 Product Flavors 管理（`dev` / `stable` 两个变体），业务代码完全同源
 
 ## 技术栈
 
@@ -55,7 +60,8 @@ cd android
 ./gradlew assembleDebug
 # Windows 本机也可用已安装的 Gradle：
 # JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" \
-#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleDebug
+#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleDevDebug      # 开发变体（TheBell Beta）
+#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleStableDebug  # 稳定变体（TheBell）
 ```
 
 产物：`android/app/build/outputs/apk/debug/app-debug.apk`
@@ -122,7 +128,7 @@ scripts/
 {
   "app": "pascal.thebell",
   "format": "thebell/v1",
-  "version": "Dev0.4.2202",
+  "version": "Dev0.4.2204",
   "plan": { "name": "我的学习计划", "startDate": "2026-11-21", "totalDays": 100 },
   "routine": [
     { "time": "08:00–08:50", "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 },
@@ -160,15 +166,36 @@ scripts/
 
 ## 图标与 Logo
 
-猫耳时钟：白色底、蓝色圆环、黄色轴心，分针指向 5 点后延伸成猫尾巴，圆环顶部两只带弧度的猫耳。
+猫耳时钟：白色底、黑色圆环、暗金色轴心，分针指向 5 点后延伸成猫尾巴，圆环顶部两只带弧度的猫耳。
 
 - 源文件：`resources/icon.svg`（1024，白色圆角底，按部件分组：ring / ear-left / ear-right / hand-hour / hand-minute / cat-tail / center-pin）、`icon-square.svg`、`icon-round.svg`、`logo.svg`（透明底）、`icon-monochrome.svg`（单色剪影）、`icon-bw.svg`（黑白墨稿）
 - 申报图样：`icon-1500.png`（彩色）、`icon-bw-1500.png`（黑白），打包件 `D:/TheBell-icon-source.zip`
 - 生成：`python scripts/logo.py` 输出 SVG 与 Android 矢量层；`node scripts/render_icons.mjs` 光栅化 `mipmap-*/ic_launcher*.png`、`resources/icon.png` 与 iOS `AppIcon`
 - 自适应图标：108dp 画布，纯白 `background` + 矢量 `foreground`，图形控制在中心 66dp 安全区内，耳朵 / 尾巴不会被任何遮罩裁掉
 - 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色
-- 配色：蓝 `#2563EB`、黄 `#FBBF24`、白 `#FFFFFF`
+- 配色：黑 `#000000`、暗金 `#B8860B`、白 `#FFFFFF`
 - 应用内：侧边栏品牌区、启动加载页、设置「关于」卡片共用 `public/brand-icon.svg`（由 `logo.py` 随 SVG 一起同步，favicon 同源）
+
+## 1.0 变更（stable）
+
+- 从开发版 Dev0.4.2202 复制建立稳定版基线：包名 `pascal.thebell.std`、软件名 TheBell、versionName 1.0（versionCode 2，与开发版并存）
+- 稳定版沿用蓝黄品牌（`#2563EB` / `#FBBF24`），与开发版的黑金品牌通过构建变体区分
+- 纳入单仓库双基线架构：构建变体与业务代码与 dev 分支完全同源
+
+## Dev0.4.2204 变更
+
+- **仓库架构重组**：原开发版（`D:/TheBell`）与稳定版（`D:/TheBell_Stable`）两个仓库合并为单仓库双基线（`dev` / `main`），原目录保留为迁移前备份
+- **构建变体**：新增 Product Flavors——`dev`（`pascal.thebell` / TheBell Beta / 黑金图标）与 `stable`（`pascal.thebell.std` / TheBell / 蓝黄图标）；启动图标与应用内品牌图按变体出自 `src/{dev,stable}/` 资源目录
+- **业务代码去标识化**：软件名与版本号改由 `DeviceInfoPlugin` 运行时注入、前端动态显示，dev / main 分支业务代码零差异，合并不再产生标识类冲突
+- 图标渲染脚本按变体输出；版本 Dev0.4.2204（dev flavor / versionCode 9），stable flavor 1.0（versionCode 2）
+
+## 历史变更（继承自共同开发历史）
+
+## Dev0.4.2203 变更
+
+- 品牌：LOGO 蓝色圆环 / 猫耳 / 指针 / 猫尾全部改为黑色，中心轴心改为暗金色（`#000000` / `#B8860B`），应用图标、Web 角标、favicon、Android 矢量层与多密度 PNG、iOS 图标同步重生成
+- 名称体系：项目名 `TheBell_Dev`（本仓库为 TheBell 开发版主线），软件名改为 **TheBell Beta**（桌面名称、应用内品牌、窗口标题、备份分享标题），包名保持 `pascal.thebell`
+- 版本 Dev0.4.2203（versionCode 8）
 
 ## Dev0.4.2202 变更
 

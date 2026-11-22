@@ -19,15 +19,19 @@ import { parseBackup, serializeBackup } from '../lib/backup';
 import { fullDateCN } from '../lib/date';
 import { usePlanStore } from '../stores/plan';
 import { toast } from '../lib/toast';
-import { platformInfo as loadPlatformInfo, type PlatformInfo } from '../lib/deviceinfo';
+import { appDisplayName, appVersionLabel, platformInfo as loadPlatformInfo, type PlatformInfo } from '../lib/deviceinfo';
 import AppModal from '../components/AppModal.vue';
 
 const store = usePlanStore();
 
 const platformLabel = ref<PlatformInfo | null>(null);
+const appLabel = ref(appDisplayName());
+const appVersion = ref(appVersionLabel());
 onMounted(() => {
   void loadPlatformInfo().then((info) => {
     platformLabel.value = info;
+    appLabel.value = info.appName ?? appLabel.value;
+    appVersion.value = info.versionName || appVersionLabel();
   });
 });
 const platformText = computed(() => {
@@ -95,7 +99,7 @@ async function exportPlan(): Promise<void> {
       });
       await Share.share({
         title: '导出计划',
-        text: 'TheBell计划备份',
+        text: `${appLabel.value} 计划备份`,
         url: result.uri,
         dialogTitle: '保存或分享备份文件',
       });
@@ -376,10 +380,10 @@ function resetAll(): void {
           <div class="about-brand">
             <img class="about-logo" src="/brand-icon.svg" alt="TheBell" width="42" height="42" />
             <div>
-              <b>TheBell</b>
+              <b>{{ appLabel }}</b>
               <p>TheBell · 50/10 专注计时、学习计划与倒数日</p>
             </div>
-            <span class="version-tag">1.0</span>
+            <span class="version-tag">{{ appVersion }}</span>
           </div>
           <ul class="about-meta">
             <li><span>包名</span><b>pascal.thebell</b></li>

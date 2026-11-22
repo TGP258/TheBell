@@ -10,23 +10,29 @@ const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const PORT = 9336;
 const PROFILE = path.join(ROOT, '_icon_render_profile');
 
-const RES = path.join(ROOT, 'android/app/src/main/res');
 const IOS = path.join(ROOT, 'ios/App/App/Assets.xcassets/AppIcon.appiconset');
+// 启动图标属于变体资源：dev（黑金）与 stable（蓝黄）各自输出到 flavor source set
+const FLAVORS = [
+  { res: 'android/app/src/dev/res', icon: 'icon.svg', round: 'icon-round.svg' },
+  { res: 'android/app/src/stable/res', icon: 'stable/icon.svg', round: 'stable/icon-round.svg' },
+];
 
 const jobs = [];
-for (const [density, size] of Object.entries({
-  mdpi: 48,
-  hdpi: 72,
-  xhdpi: 96,
-  xxhdpi: 144,
-  xxxhdpi: 192,
-})) {
-  jobs.push({ svg: 'icon.svg', size, out: path.join(RES, `mipmap-${density}/ic_launcher.png`) });
-  jobs.push({
-    svg: 'icon-round.svg',
-    size,
-    out: path.join(RES, `mipmap-${density}/ic_launcher_round.png`),
-  });
+for (const flavor of FLAVORS) {
+  for (const [density, size] of Object.entries({
+    mdpi: 48,
+    hdpi: 72,
+    xhdpi: 96,
+    xxhdpi: 144,
+    xxxhdpi: 192,
+  })) {
+    jobs.push({ svg: flavor.icon, size, out: path.join(ROOT, flavor.res, `mipmap-${density}/ic_launcher.png`) });
+    jobs.push({
+      svg: flavor.round,
+      size,
+      out: path.join(ROOT, flavor.res, `mipmap-${density}/ic_launcher_round.png`),
+    });
+  }
 }
 jobs.push({ svg: 'icon.svg', size: 1024, out: path.join(ROOT, 'resources/icon.png') });
 jobs.push({ svg: 'icon.svg', size: 1500, out: path.join(ROOT, 'resources/icon-1500.png') });

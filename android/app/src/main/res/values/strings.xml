@@ -1,7 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TheBell</string>
-    <string name="title_activity_main">TheBell</string>
     <string name="package_name">pascal.thebell</string>
     <string name="custom_url_scheme">pascal.thebell</string>
 </resources>

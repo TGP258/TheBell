@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'pascal.thebell.std',
+  appId: 'pascal.thebell',
   appName: 'TheBell',
   webDir: 'dist',
   android: {
