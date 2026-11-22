@@ -98,7 +98,7 @@ onMounted(async () => {
         <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
           <b>TheBell</b>
-          <span>学习时钟 · Dev0.4.2202</span>
+          <span>学习时钟 · 1.0</span>
         </div>
       </div>
 
