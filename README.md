@@ -1,6 +1,6 @@
 # TheBell_Dev
 
-一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.4.2203**。
+一个以 **50 分钟学习 + 10 分钟休息** 为节奏的学习时钟、计划与倒数日应用。**Dev0.4.2204**。
 
 本仓库是 TheBell 的**开发版主线**（项目名 `TheBell_Dev`），面向用户安装的软件名为 **TheBell Beta**；稳定版本在独立的稳定版分支仓库中整理发布，本仓库的变更经真机验证后再汇入。
 
@@ -26,7 +26,8 @@
 - **倒数日**：主倒数 + 多个目标日，支持颜色与置顶
 - **JSON 导入 / 导出**：包含计划、任务、作息起止时间、打卡状态、分段计时、独立计时器、倒数日、主题
 - **主题**：浅色 / 深色 / 跟随系统
-- **版本**：`versionName = Dev0.4.2203`，软件名 TheBell Beta，包名 `pascal.thebell`
+- **版本**：`versionName = Dev0.4.2204`（dev 变体），软件名 TheBell Beta
+- **双基线**：本仓库 `dev` 分支为开发版基线，`main` 分支为稳定版基线（软件名 TheBell，包名 `pascal.thebell.std`）；包名 / 软件名 / 图标差异由 Product Flavors 管理（`dev` / `stable` 两个变体），业务代码完全同源
 
 ## 技术栈
 
@@ -57,7 +58,8 @@ cd android
 ./gradlew assembleDebug
 # Windows 本机也可用已安装的 Gradle：
 # JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" \
-#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleDebug
+#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleDevDebug      # 开发变体（TheBell Beta）
+#   "D:/Grandle/gradle-8.11.1/bin/gradle.bat" assembleStableDebug  # 稳定变体（TheBell）
 ```
 
 产物：`android/app/build/outputs/apk/debug/app-debug.apk`
@@ -124,7 +126,7 @@ scripts/
 {
   "app": "pascal.thebell",
   "format": "thebell/v1",
-  "version": "Dev0.4.2203",
+  "version": "Dev0.4.2204",
   "plan": { "name": "我的学习计划", "startDate": "2026-11-21", "totalDays": 100 },
   "routine": [
     { "time": "08:00–08:50", "start": "08:00", "end": "08:50", "title": "学习段 1", "kind": "study", "durationSec": 3000 },
@@ -171,6 +173,13 @@ scripts/
 - 主题图标（Monet）：额外提供 `drawable/ic_launcher_monochrome.xml` 单色层，Android 13+ 会按壁纸取色自动染色
 - 配色：黑 `#000000`、暗金 `#B8860B`、白 `#FFFFFF`
 - 应用内：侧边栏品牌区、启动加载页、设置「关于」卡片共用 `public/brand-icon.svg`（由 `logo.py` 随 SVG 一起同步，favicon 同源）
+
+## Dev0.4.2204 变更
+
+- **仓库架构重组**：原开发版（`D:/TheBell`）与稳定版（`D:/TheBell_Stable`）两个仓库合并为单仓库双基线（`dev` / `main`），原目录保留为迁移前备份
+- **构建变体**：新增 Product Flavors——`dev`（`pascal.thebell` / TheBell Beta / 黑金图标）与 `stable`（`pascal.thebell.std` / TheBell / 蓝黄图标）；启动图标与应用内品牌图按变体出自 `src/{dev,stable}/` 资源目录
+- **业务代码去标识化**：软件名与版本号改由 `DeviceInfoPlugin` 运行时注入、前端动态显示，dev / main 分支业务代码零差异，合并不再产生标识类冲突
+- 图标渲染脚本按变体输出；版本 Dev0.4.2204（dev flavor / versionCode 9），stable flavor 1.0（versionCode 2）
 
 ## Dev0.4.2203 变更
 

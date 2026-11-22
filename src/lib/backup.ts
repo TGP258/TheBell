@@ -1,3 +1,4 @@
+import { appVersionLabel } from './deviceinfo';
 import type {
   AppData,
   BackupFile,
@@ -77,7 +78,7 @@ export function buildBackup(data: AppData): BackupFile {
   return {
     app: 'pascal.thebell',
     format: 'thebell/v1',
-    version: 'Dev0.4.2203',
+    version: appVersionLabel(),
     exportedAt: new Date().toISOString(),
     plan: { ...data.plan },
     routine: routine.map((item) => ({

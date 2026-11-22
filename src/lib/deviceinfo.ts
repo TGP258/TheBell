@@ -1,10 +1,14 @@
 import { registerPlugin } from '@capacitor/core';
 
 export interface PlatformInfo {
-  /** 平台名 + 系统版本，如 "PadOS 13"、"Android 14"、"iPadOS 17.5"、"Web 预览" */
+  /** 平台名 + 系统版本，如 "Android 13"、"iPadOS 17.5"、"Web 预览" */
   name: string;
   /** 厂商 UI 版本（如 HyperOS / MIUI），获取不到时不显示 */
   ui?: string;
+  /** 软件名，由构建变体注入（如 TheBell Beta / TheBell） */
+  appName?: string;
+  /** 构建变体的 versionName（如 Dev0.4.2204 / 1.0） */
+  versionName?: string;
 }
 
 interface DeviceInfoBridge {
@@ -13,13 +17,30 @@ interface DeviceInfoBridge {
     manufacturer: string;
     model: string;
     isTablet: boolean;
+    appName: string;
+    versionName: string;
     uiVersion: string;
   }>;
 }
 
 const DeviceInfo = registerPlugin<DeviceInfoBridge>('DeviceInfo');
 
-/** 浏览器或桥不可用时的降级：从 User-Agent 解析 */
+/**
+ * 软件名 / 版本号的同步缓存：由 platformInfo() 在应用挂载时预热。
+ * 业务层（品牌文字、导出备份、版本标签）一律读取这里的同步 getter，
+ * 使 dev / main 两条分支的业务代码不含任何构建标识，合并零冲突。
+ */
+const cache = { appName: 'TheBell', versionName: '' };
+
+export function appDisplayName(): string {
+  return cache.appName;
+}
+
+export function appVersionLabel(): string {
+  return cache.versionName || 'Dev';
+}
+
+/** 浏览器或桥不可用时的降级：从 User-Agent 解析系统版本 */
 function fromUserAgent(): PlatformInfo {
   const ua = navigator.userAgent;
   const iPad =
@@ -50,8 +71,15 @@ function uiLabel(value: string): string | undefined {
 export async function platformInfo(): Promise<PlatformInfo> {
   try {
     const raw = await DeviceInfo.info();
-    return { name: `Android ${raw.osVersion}`, ui: uiLabel(raw.uiVersion) };
+    if (raw.appName) cache.appName = raw.appName;
+    if (raw.versionName) cache.versionName = raw.versionName;
+    return {
+      name: `Android ${raw.osVersion}`,
+      ui: uiLabel(raw.uiVersion),
+      appName: raw.appName,
+      versionName: raw.versionName,
+    };
   } catch {
-    return fromUserAgent();
+    return { ...fromUserAgent(), appName: cache.appName, versionName: cache.versionName };
   }
 }

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'pascal.thebell',
-  appName: 'TheBell Beta',
+  appName: 'TheBell',
   webDir: 'dist',
   android: {
     backgroundColor: '#f4f4f7',

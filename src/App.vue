@@ -13,6 +13,7 @@ import {
 import { usePlanStore } from './stores/plan';
 import { fullDateCN, relativeLabel } from './lib/date';
 import { toast } from './lib/toast';
+import { appVersionLabel, platformInfo } from './lib/deviceinfo';
 import TodayView from './views/TodayView.vue';
 import PlanView from './views/PlanView.vue';
 import TimerView from './views/TimerView.vue';
@@ -24,6 +25,10 @@ type Tab = 'today' | 'plan' | 'timer' | 'countdown' | 'settings';
 
 const store = usePlanStore();
 const tab = ref<Tab>('today');
+
+/** 软件名与版本号由构建变体注入（DeviceInfo 插件），业务代码不硬编码 */
+const appLabel = ref('TheBell');
+const appVersion = ref(appVersionLabel());
 
 const tabs: { id: Tab; label: string; icon: Component }[] = [
   { id: 'today', label: '今日', icon: CalendarCheck2 },
@@ -75,6 +80,12 @@ onMounted(async () => {
   await store.init();
   if (store.loadError) toast(store.loadError, 'info');
 
+  void platformInfo().then((info) => {
+    appLabel.value = info.appName ?? appLabel.value;
+    appVersion.value = info.versionName || appVersionLabel();
+    document.title = `${appLabel.value} · 学习时钟`;
+  });
+
   if (Capacitor.isNativePlatform()) {
     CapApp.addListener('backButton', () => {
       if (document.body.classList.contains('modal-open')) {
@@ -97,8 +108,8 @@ onMounted(async () => {
       <div class="brand">
         <img class="brand-mark" src="/brand-icon.svg" alt="TheBell" width="40" height="40" />
         <div class="brand-text">
-          <b>TheBell Beta</b>
-          <span>学习时钟 · Dev0.4.2203</span>
+          <b>{{ appLabel }}</b>
+          <span>学习时钟 · {{ appVersion }}</span>
         </div>
       </div>
 
@@ -134,7 +145,7 @@ onMounted(async () => {
     <main class="main">
       <div v-if="!store.ready" class="boot">
         <img class="boot-mark" src="/brand-icon.svg" alt="" width="68" height="68" />
-        <b>TheBell Beta</b>
+        <b>{{ appLabel }}</b>
         <span class="boot-spinner" />
         <p>正在准备你的计划…</p>
       </div>

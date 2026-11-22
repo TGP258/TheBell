@@ -443,7 +443,10 @@ def main() -> None:
     drawable = android / "drawable"
     drawable.mkdir(parents=True, exist_ok=True)
     (drawable / "ic_launcher_background.xml").write_text(BACKGROUND_XML, encoding="utf-8")
-    (drawable / "ic_launcher_foreground.xml").write_text(
+    # 彩色前景属于变体资源：dev 品牌（黑金）输出到 dev flavor 的 source set
+    dev_drawable = ROOT / "android" / "app" / "src" / "dev" / "res" / "drawable"
+    dev_drawable.mkdir(parents=True, exist_ok=True)
+    (dev_drawable / "ic_launcher_foreground.xml").write_text(
         vector_xml(shapes), encoding="utf-8"
     )
     (drawable / "ic_launcher_monochrome.xml").write_text(

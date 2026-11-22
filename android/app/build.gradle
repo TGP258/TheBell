@@ -5,11 +5,8 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     buildToolsVersion "35.0.0"
     defaultConfig {
-        applicationId "pascal.thebell"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "Dev0.4.2203"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,6 +14,30 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 构建变体：dev = 开发版（TheBell Beta），stable = 稳定版（TheBell）。
+    // 包名、软件名、图标等「构建标识」差异全部收敛在这里与 flavor 资源目录，
+    // dev / main 两条分支的业务代码保持同源，合并不会产生标识类冲突。
+    flavorDimensions "channel"
+
+    productFlavors {
+        dev {
+            dimension "channel"
+            applicationId "pascal.thebell"
+            resValue "string", "app_name", "TheBell Beta"
+            resValue "string", "title_activity_main", "TheBell Beta"
+            versionCode 9
+            versionName "Dev0.4.2204"
+        }
+        stable {
+            dimension "channel"
+            applicationId "pascal.thebell.std"
+            resValue "string", "app_name", "TheBell"
+            resValue "string", "title_activity_main", "TheBell"
+            versionCode 2
+            versionName "1.0"
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false

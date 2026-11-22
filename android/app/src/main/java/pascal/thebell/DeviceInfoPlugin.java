@@ -13,7 +13,8 @@ import com.getcapacitor.annotation.CapacitorPlugin;
 import java.lang.reflect.Method;
 
 /**
- * 只读设备信息：系统版本、厂商型号、平板形态与厂商 UI 版本。
+ * 只读设备与应用信息：系统版本、厂商型号、平板形态、厂商 UI 版本，
+ * 以及由构建变体注入的软件名（app_name）与版本号（versionName）。
  * 不申请任何权限；厂商 UI 版本通过系统属性读取（小米 HyperOS / MIUI），
  * 其他厂商没有对应属性时返回空串，由前端自行降级。
  */
@@ -27,6 +28,8 @@ public class DeviceInfoPlugin extends Plugin {
         result.put("manufacturer", Build.MANUFACTURER);
         result.put("model", Build.MODEL);
         result.put("isTablet", isTablet());
+        result.put("appName", bridge.getContext().getString(R.string.app_name));
+        result.put("versionName", versionName());
         result.put(
             "uiVersion",
             systemProperty(
@@ -43,6 +46,18 @@ public class DeviceInfoPlugin extends Plugin {
         Configuration conf = activity.getResources().getConfiguration();
         return (conf.screenLayout & Configuration.SCREENLAYOUT_SIZE_MASK)
             >= Configuration.SCREENLAYOUT_SIZE_LARGE;
+    }
+
+    private String versionName() {
+        try {
+            return bridge
+                .getContext()
+                .getPackageManager()
+                .getPackageInfo(bridge.getContext().getPackageName(), 0)
+                .versionName;
+        } catch (Throwable error) {
+            return "";
+        }
     }
 
     private static String systemProperty(String key, String fallback) {
