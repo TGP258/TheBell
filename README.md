@@ -6,6 +6,7 @@
     <img src="https://img.shields.io/badge/platform-Android%20%7C%20iPadOS-blue" alt="Platform" />
     <img src="https://img.shields.io/badge/framework-Vue%203%20%2B%20Capacitor%207-brightgreen" alt="Framework" />
     <img src="https://img.shields.io/badge/storage-SQLite%20%2F%20offline-orange" alt="Storage" />
+    <img src="https://img.shields.io/badge/license-Apache--2.0-green" alt="License" />
   </p>
 </div>
 
@@ -211,4 +212,6 @@ scripts/
 
 ## 许可
 
-本项目暂未设置开源许可证，代码与品牌资源版权归项目作者所有。
+本项目基于 [Apache License 2.0](./LICENSE) 开源发布。
+
+> 品牌资产（猫耳时钟 logo 及相关图形资源）不属于本许可的授权范围。
