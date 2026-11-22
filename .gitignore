@@ -32,3 +32,6 @@ _*.log
 
 # WorkBuddy 本地会话数据
 .workbuddy/
+
+# 本地临时验证
+_verify/
